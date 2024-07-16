@@ -13,7 +13,7 @@ import (
 func Adapter(conf *algo_config.AlgoConfig) *graph.Graph {
 	cmd := exec.Command(
 		"mpirun",
-		"-n", fmt.Sprintf("%d", conf.Proc),
+		"-n", fmt.Sprintf("%d", conf.ProcNum + 1), // +1 так, как добавляется ведущий процесс (master)
 		"-oversubscribe",
 		"bin/main_mpi",
 		"-algo", algo_types.ALGO_basic_mpi,
@@ -24,15 +24,15 @@ func Adapter(conf *algo_config.AlgoConfig) *graph.Graph {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	fmt.Println("=======COMMAND FOR MPI========\n", cmd, "\n=========================")
+	log.Println("COMMAND FOR MPI: \n", cmd)
 
 	cmd.Start()
 	defer cmd.Process.Kill()
 
 	// ждем, пока mpi отработает и выводим, что он написал
 	if err := cmd.Wait(); err != nil {
-		fmt.Println("error in algo " + algo_types.ALGO_basic_mpi)
-		log.Panic(err)
+		log.Println("error in algo " + algo_types.ALGO_basic_mpi)
+		log.Panicln(err)
 	}
 	return &graph.Graph{}
 }

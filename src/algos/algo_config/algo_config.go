@@ -7,7 +7,7 @@ import (
 
 type AlgoConfig struct {
 	GraphFilename string
-	Proc uint
+	ProcNum int
 }
 
 func (conf *AlgoConfig) ObjToStr() string {
@@ -17,4 +17,13 @@ func (conf *AlgoConfig) ObjToStr() string {
 	}
 
 	return string(jsonStr)
+}
+
+func StrToObj(str string) *AlgoConfig {
+	var obj AlgoConfig
+	err := json.Unmarshal([]byte(str), &obj)
+	if (err != nil) {
+		log.Panicln(err)
+	}
+	return &obj
 }

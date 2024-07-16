@@ -53,9 +53,9 @@ func readFromCsvFile(file *os.File) *Graph {
 		return ind
 	}
 	for _, row := range records {
-		fromInd := getIndex(row[0])
-		toInd := getIndex(row[1])
-		edges = append(edges, Edge{fromInd, toInd})
+		v1Ind := getIndex(row[0])
+		v2Ind := getIndex(row[1])
+		edges = append(edges, Edge{V1: v1Ind, V2:v2Ind})
 	}
-	return &Graph{CntVertex: indexCount, Edges: edges, Index2str: index2str}
+	return &Graph{VertexCnt: indexCount, Edges: edges, Index2str: index2str}
 }
