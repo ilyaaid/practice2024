@@ -5,9 +5,11 @@ import (
 	"CC/src/graph"
 )
 
-func Adapter(conf *algo_config.AlgoConfig) *graph.Graph {
-	g := graph.ReadFromFile(conf.GraphFilename)
-
+func Adapter(conf *algo_config.AlgoConfig) (*graph.Graph, error) {
+	g, err := conf.GrIO.Read()
+	if err != nil {
+		return nil, err
+	}
 	CCSearch(g)
-	return g
+	return g, nil
 }

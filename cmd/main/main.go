@@ -4,9 +4,11 @@ import (
 	"CC/src/algos/algo2adapter"
 	"CC/src/algos/algo_config"
 	"CC/src/flag_handler"
+	"CC/src/graph"
 	"log"
 	"os"
 )
+
 
 func main() {
 	log.SetPrefix("======= main program =======\n")
@@ -19,14 +21,20 @@ func main() {
 
 	algo := fh.Algo
 	// получаем соответствующую функцию адаптера для получения компонент связности
-	adapterFunc := algo2adapter.GetAdapter(algo)
+	adapterFunc, err := algo2adapter.GetAdapter(algo)
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	algoConfig := algo_config.AlgoConfig{
-		GraphFilename: fh.File,
+		GrIO: &graph.FileGraphIO{Filename:fh.File},
 		ProcNum: fh.Proc,
 	}
 
-	graph := adapterFunc(&algoConfig)
-	log.Println(graph.CC)
+	graph, err := adapterFunc(&algoConfig)
+	if (err != nil) {
+		log.Panicln(err)
+	}
 
+	log.Println(graph.CC)
 }

@@ -22,6 +22,19 @@ func main() {
 	var fh flag_handler.FlagHadler
 	fh.Parse()
 
-	conf := algo_config.StrToObj(fh.Conf)
-	algo2run.GetRun(fh.Algo)(conf)
+	var err error
+	conf, err := algo_config.StrToObj(fh.Conf)
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	runFunc, err := algo2run.GetRun(fh.Algo)
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	err = runFunc(conf)
+	if err != nil {
+		log.Panicln(err)
+	}
 }

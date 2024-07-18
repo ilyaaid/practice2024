@@ -2,39 +2,42 @@ package graph
 
 import (
 	"encoding/csv"
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
 )
 
-func ReadFromFile(filename string) *Graph {
-	file, err := os.Open(filename)
+type FileGraphIO struct {
+	Filename string
+}
+
+func (fGrIO *FileGraphIO) Read() (*Graph, error) {
+	file, err := os.Open(fGrIO.Filename)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer file.Close()
 
-	fileext := filepath.Ext(filename)
+	fileext := filepath.Ext(fGrIO.Filename)
 
 	switch fileext {
 	case ".csv":
 		return readFromCsvFile(file)
 	default:
-		log.Fatal("unknown file extension (file with graph:" + filename + ")")
-		return nil
+		return nil, fmt.Errorf("unknown file extension (file with graph: %s)", fGrIO.Filename)
 	}
 }
 
-func readFromCsvFile(file *os.File) *Graph {
+func readFromCsvFile(file *os.File) (*Graph, error) {
 	csvReader := csv.NewReader(file)
 
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	if csvReader.FieldsPerRecord != 2 {
-		log.Fatal("the file \"" + file.Name() + "\" should consist of 2 columns")
+		return nil, fmt.Errorf("the file \"%s\" should consist of 2 columns", file.Name())
 	}
 
 	indexCount := IndexType(0)
@@ -57,5 +60,10 @@ func readFromCsvFile(file *os.File) *Graph {
 		v2Ind := getIndex(row[1])
 		edges = append(edges, Edge{V1: v1Ind, V2:v2Ind})
 	}
-	return &Graph{VertexCnt: indexCount, Edges: edges, Index2str: index2str}
+	return &Graph{VertexCnt: indexCount, Edges: edges, Index2str: index2str}, nil
+}
+
+
+func (fGrIO *FileGraphIO) WriteCC(cc map[IndexType]IndexType) error {
+	return nil
 }

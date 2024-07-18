@@ -6,21 +6,21 @@ import (
 	"CC/src/algos/basic"
 	"CC/src/algos/basic_mpi"
 	"CC/src/graph"
-	"log"
+	"fmt"
 )
 
-type AdapterFuncType func(*algo_config.AlgoConfig) *graph.Graph
+type AdapterFuncType func(*algo_config.AlgoConfig) (*graph.Graph, error)
 
 var algo2adapter = map[string]AdapterFuncType{
 	algo_types.ALGO_basic:     basic.Adapter,
 	algo_types.ALGO_basic_mpi: basic_mpi.Adapter,
 }
 
-func GetAdapter(algo string) AdapterFuncType {
+func GetAdapter(algo string) (AdapterFuncType, error) {
 	adapterFunc, isExistAdapter := algo2adapter[algo]
 	if !isExistAdapter {
-		log.Panic("algo: \"" + algo + "\" does not exist")
+		return nil, fmt.Errorf("algo: \"%s\" does not exist", algo)
 	}
 
-	return adapterFunc
+	return adapterFunc, nil
 }

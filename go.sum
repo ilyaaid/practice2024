@@ -1,2 +1,4 @@
 github.com/sbromberger/gompi v0.2.0 h1:SM+vHgYN5fzT2RVePXKP8dgVx+278Tku+nS+LCBnt5Q=
 github.com/sbromberger/gompi v0.2.0/go.mod h1:7Rll8EsxkeEFIlcGXtwqmk1H07DyRevU/87z+h++dHQ=
+golang.org/x/sync v0.7.0 h1:YsImfSBoP9QPYL0xyKJPq0gcaJdG3rInoqxTWbfQu9M=
+golang.org/x/sync v0.7.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=

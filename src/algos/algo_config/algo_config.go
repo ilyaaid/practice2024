@@ -1,29 +1,52 @@
 package algo_config
 
 import (
+	"CC/src/graph"
 	"encoding/json"
-	"log"
 )
 
+// при изменении или добавлении полей обязательно менять метод UnmarshalJSON
 type AlgoConfig struct {
-	GraphFilename string
+	GrIO graph.GraphIO
 	ProcNum int
 }
 
-func (conf *AlgoConfig) ObjToStr() string {
-	jsonStr, err := json.Marshal(conf)
-	if (err != nil) {
-		log.Panicln(err)
-	}
+func (conf *AlgoConfig) UnmarshalJSON(data []byte) error {
+    type AlgoConfigJSON struct {
+		GrIO json.RawMessage
+        ProcNum int
+    }
 
-	return string(jsonStr)
+    var confj AlgoConfigJSON
+    err := json.Unmarshal(data, &confj)
+    if err != nil {
+        return err
+    }
+	conf.ProcNum = confj.ProcNum
+
+	var v1 graph.FileGraphIO
+	err = json.Unmarshal(confj.GrIO, &v1)
+	if err == nil {
+		conf.GrIO = &v1
+		return nil
+	}
+    return err
 }
 
-func StrToObj(str string) *AlgoConfig {
+func (conf *AlgoConfig) ObjToStr() (string, error) {
+	jsonStr, err := json.Marshal(conf)
+	if (err != nil) {
+		return "", err
+	}
+
+	return string(jsonStr), nil
+}
+
+func StrToObj(str string) (*AlgoConfig, error) {
 	var obj AlgoConfig
 	err := json.Unmarshal([]byte(str), &obj)
 	if (err != nil) {
-		log.Panicln(err)
+		return nil, err
 	}
-	return &obj
+	return &obj, nil
 }

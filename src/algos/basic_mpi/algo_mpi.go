@@ -3,7 +3,6 @@ package basic_mpi
 import (
 	"CC/src/algos/algo_config"
 	"CC/src/graph"
-	"log"
 
 	mpi "github.com/sbromberger/gompi"
 )
@@ -20,7 +19,7 @@ func getSlaveRanksArray() []int {
 	return arr
 }
 
-func Run(conf *algo_config.AlgoConfig) {
+func Run(conf *algo_config.AlgoConfig) error {
 	rank := mpi.WorldRank()
 	// общий коммуникатор
 	comm := mpi.NewCommunicator(nil)
@@ -33,13 +32,14 @@ func Run(conf *algo_config.AlgoConfig) {
 
 	var master Master
 	var slave Slave
+	var err error
 
 	if rank == MASTER_RANK {
 		master = Master {
 			comm: comm,
 			conf: conf,
 		}
-		master.Init()
+		err = master.Init()
 	} else {
 		slave = Slave {
 			rank: rank,
@@ -47,15 +47,20 @@ func Run(conf *algo_config.AlgoConfig) {
 			slavesComm: slavesComm,
 			conf: conf,
 		}
-		slave.Init()
+		err = slave.Init()
+	}
+	if err != nil {
+		return err
 	}
 
 	// распеределение ребер с ведущего по всем ведомым узлам (разбиение графа на части)
 	if (rank == MASTER_RANK) {
-		master.SendAllEdges()
+		err = master.SendAllEdges()
 	} else {
-		slave.GetEdges()
-		log.Println(slave.edges)
+		err = slave.GetEdges()
+	}
+	if err != nil {
+		return err
 	}
 	comm.Barrier()
 
@@ -67,19 +72,40 @@ func Run(conf *algo_config.AlgoConfig) {
 
 	// вычисляем CC
 	if (rank == MASTER_RANK) {
-		master.manageCCSearch()
+		err = master.manageCCSearch()
 	} else {
-		slave.CCSearch()
+		err = slave.CCSearch()
+	}
+	if err != nil {
+		return err
 	}
 
 	comm.Barrier()
+
+	// реализация через отправку результата на ведущий процесс
 	if (rank == MASTER_RANK) {
-		master.getResult()
+		err = master.getResult()
 	} else {
-		slave.sendResult()
+		err = slave.sendResult()
 	}
-	// if rank != MASTER_RANK {
-	// 	log.Println(slave.cc)
-	// }
-	
+	if err != nil {
+		return err
+	}
+
+	if (rank == MASTER_RANK) {
+		err = master.prepResult()
+	}
+	if err != nil {
+		return err
+	}
+	comm.Barrier()
+
+	if (rank != MASTER_RANK) {
+		err = slave.addResult()
+	}
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
