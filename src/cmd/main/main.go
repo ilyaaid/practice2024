@@ -1,10 +1,10 @@
 package main
 
 import (
-	"CC/src/algos/algo2adapter"
-	"CC/src/algos/algo_config"
-	"CC/src/flag_handler"
-	"CC/src/graph"
+	"CC/algos/algo2adapter"
+	"CC/algos/algo_config"
+	"CC/flag_handler"
+	"CC/graph"
 	"log"
 	"os"
 )

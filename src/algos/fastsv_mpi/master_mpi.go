@@ -1,11 +1,11 @@
-package basic_mpi
+package fastsv_mpi
 
 import (
 	"CC/algos/algo_config"
-	"CC/algos/algo_types"
 	"CC/graph"
 	"encoding/json"
 	"fmt"
+	// "log"
 	"os"
 	"path"
 
@@ -53,7 +53,7 @@ func (master *Master) SendAllEdges() error {
 			master.comm.SendString(edgeStr, proc2, TAG_SEND_EDGE)
 		}
 	}
-	master.BcastSend(" ", TAG_NEXT_PHASE)
+	master.BcastSendTag(TAG_NEXT_PHASE)
 	return nil
 }
 
@@ -63,28 +63,45 @@ func (master *Master) BcastSend(message string, tag int) {
 	}
 }
 
+func (master *Master) BcastSendTag(tag int) {
+	master.BcastSend(" ", tag)
+}
+
 // Управление алгоритмом CC
 func (master *Master) manageCCSearch() error {
 	changed := true
+
 	for changed {
+		for step := 0; step < 1; step++ {
+			end_step_cnt := 0
+			for i := 0; i < master.conf.ProcNum; i++ {
+				// log.Println("wait")
+				_ = recvTag(master.comm, mpi.AnySource, TAG_END_STEP)
+				// log.Println("recv from", status.GetSource())
+				end_step_cnt++
+			}
+			if end_step_cnt == master.conf.ProcNum {
+				master.BcastSendTag(TAG_END_STEP)
+			}
+		}
+
 		changed = false
 		for i := 0; i < master.conf.ProcNum; i++ {
 			status := recvTag(master.comm, i, mpi.AnyTag)
-			if err := status.GetError(); err != 0 {
-				return fmt.Errorf("master.manageCCSearch: MPI_ERROR %d", err)
-			}
 			switch tag := status.GetTag(); tag {
 			case TAG_IS_CHANGED:
 				changed = true
 			case TAG_IS_NOT_CHANGED:
 				continue
+			default:
+				return fmt.Errorf("master.manageCCSearch(changed): Wrong TAG=%d", tag)
 			}
 		}
 		if changed {
-			master.BcastSend(" ", TAG_CONTINUE_CC)
+			master.BcastSendTag(TAG_CONTINUE_CC)
 		}
 	}
-	master.BcastSend(" ", TAG_NEXT_PHASE)
+	master.BcastSendTag(TAG_NEXT_PHASE)
 	return nil
 }
 
@@ -92,26 +109,15 @@ func (master *Master) manageCCSearch() error {
 
 func (master *Master) getResult() error {
 	for i := 0; i < master.conf.ProcNum; i++ {
-		mes, status := master.comm.RecvBytes(i, TAG_SEND_RESULT)
+		mes, status := master.comm.RecvString(i, TAG_SEND_RESULT)
 		if err := status.GetError(); err != 0 {
 			return fmt.Errorf("master.getResult: MPI_ERROR %d", err)
 		}
 
 		var cc map[graph.IndexType]graph.IndexType
-		err := json.Unmarshal(mes, &cc)
+		err := json.Unmarshal([]byte(mes), &cc)
 		if err != nil {
 			return err
-		}
-	}
-	return nil
-}
-
-func CreateDir(path string) error {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		err := os.Mkdir(path, 0755)
-		if err != nil {
-			return fmt.Errorf("folder %s creation error", path)
 		}
 	}
 	return nil
@@ -120,16 +126,11 @@ func CreateDir(path string) error {
 func (master *Master) prepResult() error {
 	//TODO доделать генерацию правильного нового пути для результата
 	resDirPath := path.Join(".", "result")
-	err := CreateDir(resDirPath)
-	if err != nil {
-		return err
-	}
-	resDirAlgoPath := path.Join(resDirPath, algo_types.ALGO_basic_mpi)
-	err = CreateDir(resDirAlgoPath)
-	if err != nil {
-		return err
-	}
 
-	master.BcastSend(resDirAlgoPath, TAG_SEND_RESULT_PATH)
+	err := os.Mkdir(resDirPath, 0755)
+	if err != nil {
+		return fmt.Errorf("master.prepResult: folder creation error")
+	}
+	master.BcastSend(resDirPath, TAG_SEND_RESULT_PATH)
 	return nil
 }

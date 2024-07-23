@@ -1,7 +1,7 @@
 package algo_config
 
 import (
-	"CC/src/graph"
+	"CC/graph"
 	"encoding/json"
 )
 

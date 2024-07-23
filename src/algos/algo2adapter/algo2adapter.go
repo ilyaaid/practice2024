@@ -1,11 +1,12 @@
 package algo2adapter
 
 import (
-	"CC/src/algos/algo_config"
-	"CC/src/algos/algo_types"
-	"CC/src/algos/basic"
-	"CC/src/algos/basic_mpi"
-	"CC/src/graph"
+	"CC/algos/algo_config"
+	"CC/algos/algo_types"
+	"CC/algos/basic"
+	"CC/algos/basic_mpi"
+	"CC/algos/fastsv_mpi"
+	"CC/graph"
 	"fmt"
 )
 
@@ -14,6 +15,8 @@ type AdapterFuncType func(*algo_config.AlgoConfig) (*graph.Graph, error)
 var algo2adapter = map[string]AdapterFuncType{
 	algo_types.ALGO_basic:     basic.Adapter,
 	algo_types.ALGO_basic_mpi: basic_mpi.Adapter,
+	algo_types.ALGO_fastsv_mpi: fastsv_mpi.Adapter,
+	
 }
 
 func GetAdapter(algo string) (AdapterFuncType, error) {

@@ -1,0 +1,210 @@
+<FLAG>    algo: fastsv_mpi
+<FLAG>    conf: 
+<FLAG>    file: ../test_graphs/graph1.csv
+<FLAG>    proc-num: 3
+======= main program =======
+COMMAND FOR MPI: 
+ /usr/bin/mpirun -n 4 -oversubscribe bin/main_mpi -algo fastsv_mpi -conf {"GrIO":{"Filename":"../test_graphs/graph1.csv"},"ProcNum":3}
+======= MPI Proc (0) =======
+[{0 0}]
+======= MPI Proc (1) =======
+[{1 2}]
+======= MPI Proc (1) =======
+send mes= &{1 2 1} by tag= 5
+======= MPI Proc (2) =======
+[{2 1}]
+======= MPI Proc (2) =======
+send mes= &{2 1 2} by tag= 5
+======= MPI Proc (3) =======
+wait
+======= MPI Proc (0) =======
+send mes= &{0 0 0} by tag= 5
+======= MPI Proc (1) =======
+recv mes= {2 1 2} from tag= 5
+======= MPI Proc (1) =======
+send mes= &{2 1 2} by tag= 6
+======= MPI Proc (1) =======
+send!! &{2 1 2}
+======= MPI Proc (3) =======
+recv from 0
+======= MPI Proc (3) =======
+wait
+
+
+
+
+
+
+
+
+<FLAG>    algo: fastsv_mpi
+<FLAG>    conf: 
+<FLAG>    file: ../test_graphs/graph1.csv
+<FLAG>    proc-num: 4
+======= main program =======
+COMMAND FOR MPI: 
+ /usr/bin/mpirun -n 5 -oversubscribe bin/main_mpi -algo fastsv_mpi -conf {"GrIO":{"Filename":"../test_graphs/graph1.csv"},"ProcNum":4}
+======= MPI Proc (0) =======
+[{0 0}]
+======= MPI Proc (0) =======
+send mes= &{0 0 0} by tag= 5
+======= MPI Proc (1) =======
+[{1 2}]
+======= MPI Proc (1) =======
+send mes= &{1 2 1} by tag= 5
+======= MPI Proc (1) =======
+recv mes= {2 1 2} from tag= 5
+======= MPI Proc (2) =======
+[{2 1}]
+======= MPI Proc (2) =======
+send mes= &{2 1 2} by tag= 5
+======= MPI Proc (3) =======
+[]
+======= MPI Proc (4) =======
+wait
+======= MPI Proc (4) =======
+recv from 3
+======= MPI Proc (4) =======
+wait
+======= MPI Proc (4) =======
+recv from 0
+======= MPI Proc (4) =======
+wait
+======= MPI Proc (1) =======
+send mes= &{2 1 2} by tag= 6
+======= MPI Proc (1) =======
+send!! &{2 1 2}
+
+
+
+<FLAG>    algo: fastsv_mpi
+<FLAG>    conf: 
+<FLAG>    file: ../test_graphs/graph1.csv
+<FLAG>    proc-num: 3
+======= main program =======
+COMMAND FOR MPI: 
+ /usr/bin/mpirun -n 4 -oversubscribe bin/main_mpi -algo fastsv_mpi -conf {"GrIO":{"Filename":"../test_graphs/graph1.csv"},"ProcNum":3}
+======= MPI Proc (0) =======
+[{0 0}]
+======= MPI Proc (1) =======
+[{1 2}]
+======= MPI Proc (1) =======
+send mes= &{1 2 1} by tag= 5
+======= MPI Proc (2) =======
+[{2 1}]
+======= MPI Proc (2) =======
+send mes= &{2 1 2} by tag= 5
+======= MPI Proc (3) =======
+wait
+======= MPI Proc (2) =======
+recv mes= {1 2 1} from tag= 5
+======= MPI Proc (2) =======
+send mes= &{1 2 1} by tag= 6
+======= MPI Proc (2) =======
+send!! &{1 2 1}
+======= MPI Proc (1) =======
+recv mes= {1 2 1} from tag= 7
+======= MPI Proc (1) =======
+send mes= &{1 2 1} by tag= 8
+======= MPI Proc (3) =======
+recv from 1
+======= MPI Proc (3) =======
+wait
+======= MPI Proc (0) =======
+send mes= &{0 0 0} by tag= 5
+======= MPI Proc (3) =======
+recv from 0
+======= MPI Proc (3) =======
+wait
+
+
+<FLAG>    algo: fastsv_mpi
+<FLAG>    conf: 
+<FLAG>    file: ../test_graphs/graph1.csv
+<FLAG>    proc-num: 3
+======= main program =======
+COMMAND FOR MPI: 
+ /usr/bin/mpirun -n 4 -oversubscribe bin/main_mpi -algo fastsv_mpi -conf {"GrIO":{"Filename":"../test_graphs/graph1.csv"},"ProcNum":3}
+======= MPI Proc (2) =======
+[{2 1}]
+======= MPI Proc (2) =======
+send mes= {2 1 2} by tag= 5
+======= MPI Proc (3) =======
+wait
+======= MPI Proc (0) =======
+[{0 0}]
+======= MPI Proc (0) =======
+send mes= {0 0 0} by tag= 5
+======= MPI Proc (1) =======
+[{1 2}]
+======= MPI Proc (1) =======
+send mes= {1 2 1} by tag= 5
+======= MPI Proc (1) =======
+recv mes= {2 1 2} from tag= 5
+======= MPI Proc (1) =======
+send mes= {2 1 2} by tag= 6
+======= MPI Proc (1) =======
+send!! {2 1 2}
+======= MPI Proc (3) =======
+recv from 0
+======= MPI Proc (3) =======
+wait
+
+
+<FLAG>    algo: fastsv_mpi
+<FLAG>    conf: 
+<FLAG>    file: ../test_graphs/graph1.csv
+<FLAG>    proc-num: 3
+======= main program =======
+COMMAND FOR MPI: 
+ /usr/bin/mpirun -n 4 -oversubscribe bin/main_mpi -algo fastsv_mpi -conf {"GrIO":{"Filename":"../test_graphs/graph1.csv"},"ProcNum":3}
+======= MPI Proc (0) =======
+[{0 0}]
+======= MPI Proc (1) =======
+[{1 2}]
+======= MPI Proc (1) =======
+send mes= {1 2 1} by tag= 5
+======= MPI Proc (1) =======
+before recv
+======= MPI Proc (2) =======
+[{2 1}]
+======= MPI Proc (2) =======
+send mes= {2 1 2} by tag= 5
+======= MPI Proc (3) =======
+wait
+======= MPI Proc (0) =======
+send mes= {0 0 0} by tag= 5
+======= MPI Proc (2) =======
+before recv
+======= MPI Proc (3) =======
+recv from 0
+======= MPI Proc (3) =======
+wait
+======= MPI Proc (0) =======
+before recv
+======= MPI Proc (2) =======
+recv mes= {1 2 1} from tag= 5
+======= MPI Proc (1) =======
+recv mes= {2 1 2} from tag= 5
+======= MPI Proc (2) =======
+send mes= {1 2 1} by tag= 6
+======= MPI Proc (2) =======
+send!! {1 2 1}
+======= MPI Proc (2) =======
+before recv
+======= MPI Proc (1) =======
+send mes= {2 1 2} by tag= 6
+======= MPI Proc (1) =======
+send!! {2 1 2}
+======= MPI Proc (1) =======
+before recv
+======= MPI Proc (1) =======
+recv mes= {1 2 1} from tag= 7
+======= MPI Proc (1) =======
+send mes= {1 2 1} by tag= 8
+======= MPI Proc (1) =======
+before recv
+======= MPI Proc (3) =======
+recv from 1
+======= MPI Proc (3) =======
+wait

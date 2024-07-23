@@ -1,11 +1,10 @@
 package flag_handler
 
 import (
-	"CC/src/algos/algo_types"
+	"CC/algos/algo_types"
 	"flag"
 	"fmt"
 	"io"
-	"log"
 )
 
 // все возможные флаги командной строки при вызове программы
@@ -39,6 +38,5 @@ func (fh *FlagHadler) Print(w io.Writer) {
 	flag.VisitAll(func(f *flag.Flag) {
 		str += fmt.Sprintf("<FLAG>    %s: %s\n", f.Name, f.Value)
 	})
-	log.Println(str)
-	// TODO w.Write([]byte(str))
+	w.Write([]byte(str))
 }

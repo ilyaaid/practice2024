@@ -1,4 +1,4 @@
-package basic_mpi
+package fastsv_mpi
 
 import (
 	"CC/algos/algo_config"
@@ -21,7 +21,7 @@ func Adapter(conf *algo_config.AlgoConfig) (*graph.Graph, error) {
 		"-n", fmt.Sprintf("%d", conf.ProcNum + 1), // +1 так, как добавляется ведущий процесс (master)
 		"-oversubscribe",
 		"bin/main_mpi",
-		"-algo", algo_types.ALGO_basic_mpi,
+		"-algo", algo_types.ALGO_fastsv_mpi,
 		"-conf", confStr,
 	)
 	log.Println("COMMAND FOR MPI: \n", cmd)
@@ -35,7 +35,7 @@ func Adapter(conf *algo_config.AlgoConfig) (*graph.Graph, error) {
 
 	// ждем, пока mpi отработает и выводим, что он написал
 	if err := cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("error in algo %s:\n%s", algo_types.ALGO_basic_mpi, err)
+		return nil, fmt.Errorf("error in algo %s:\n%s", algo_types.ALGO_fastsv_mpi, err)
 	}
 	return &graph.Graph{}, nil
 }

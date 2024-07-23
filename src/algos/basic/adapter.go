@@ -1,8 +1,8 @@
 package basic
 
 import (
-	"CC/src/algos/algo_config"
-	"CC/src/graph"
+	"CC/algos/algo_config"
+	"CC/graph"
 )
 
 func Adapter(conf *algo_config.AlgoConfig) (*graph.Graph, error) {

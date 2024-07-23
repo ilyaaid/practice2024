@@ -6,6 +6,7 @@ const (
 
 	// Для алгоритма CC
 	TAG_IS_CHANGED
+	TAG_IS_NOT_CHANGED
 	TAG_CONTINUE_CC
 	
 	TAG_SEND_PP

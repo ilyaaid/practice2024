@@ -1,2 +1,4 @@
 bin/
 result/
+.vscode/
+test_graphs/big-*.csv

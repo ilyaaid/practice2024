@@ -1,7 +1,7 @@
 package basic
 
 import (
-	"CC/src/graph"
+	"CC/graph"
 )
 
 func CCSearch(g *graph.Graph) {

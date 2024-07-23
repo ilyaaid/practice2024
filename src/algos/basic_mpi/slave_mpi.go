@@ -1,8 +1,8 @@
 package basic_mpi
 
 import (
-	"CC/src/algos/algo_config"
-	"CC/src/graph"
+	"CC/algos/algo_config"
+	"CC/graph"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -156,12 +156,6 @@ func (slave *Slave) runPP() error {
 	if err := g.Wait(); err != nil {
 		return err
 	}
-
-	if slave.changed {
-		slave.comm.SendByte(byte(1), MASTER_RANK, TAG_IS_CHANGED)
-	} else {
-		slave.comm.SendByte(byte(0), MASTER_RANK, TAG_IS_CHANGED)
-	}
 	return nil
 }
 
@@ -174,9 +168,14 @@ func (slave *Slave) CCSearch() error {
 			return err
 		}
 
-		_, status := slave.comm.RecvString(MASTER_RANK, mpi.AnyTag)
-		tag := status.GetTag()
-		if tag == TAG_CONTINUE_CC {
+		if slave.changed {
+			sendTag(slave.comm, MASTER_RANK, TAG_IS_CHANGED)
+		} else {
+			sendTag(slave.comm, MASTER_RANK, TAG_IS_NOT_CHANGED)
+		}
+
+		status := recvTag(slave.comm, MASTER_RANK, mpi.AnyTag)
+		if tag := status.GetTag(); tag == TAG_CONTINUE_CC {
 			continue
 		} else if tag == TAG_NEXT_PHASE { 
 			break

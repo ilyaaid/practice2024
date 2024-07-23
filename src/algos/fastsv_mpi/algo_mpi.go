@@ -1,14 +1,15 @@
-package basic_mpi
+package fastsv_mpi
 
 import (
 	"CC/algos/algo_config"
 	"CC/graph"
+	// "log"
 
 	mpi "github.com/sbromberger/gompi"
 )
 
 func Vertex2Proc(conf *algo_config.AlgoConfig, v graph.IndexType) int {
-	return int(v% graph.IndexType((conf.ProcNum))) 
+	return int(v % graph.IndexType((conf.ProcNum)))
 }
 
 func getSlaveRanksArray() []int {
@@ -20,12 +21,18 @@ func getSlaveRanksArray() []int {
 }
 
 func sendTag(comm *mpi.Communicator, toProc int, tag int) {
-	comm.SendByte(0, toProc, tag)
+	comm.SendString(" ", toProc, tag)
 }
 
 func recvTag(comm *mpi.Communicator, fromProc int, tag int) mpi.Status {
-	_, status := comm.RecvByte(fromProc, tag)
+	_, status := comm.RecvString(fromProc, tag)
 	return status
+}
+
+func copyCC(dest map[graph.IndexType]graph.IndexType, src map[graph.IndexType]graph.IndexType) {
+	for key, value := range src {
+        dest[key] = value
+    }
 }
 
 func Run(conf *algo_config.AlgoConfig) error {
@@ -44,17 +51,17 @@ func Run(conf *algo_config.AlgoConfig) error {
 	var err error
 
 	if rank == MASTER_RANK {
-		master = Master {
+		master = Master{
 			comm: comm,
 			conf: conf,
 		}
 		err = master.Init()
 	} else {
-		slave = Slave {
-			rank: rank,
-			comm: comm,
+		slave = Slave{
+			rank:       rank,
+			comm:       comm,
 			slavesComm: slavesComm,
-			conf: conf,
+			conf:       conf,
 		}
 		err = slave.Init()
 	}
@@ -63,7 +70,7 @@ func Run(conf *algo_config.AlgoConfig) error {
 	}
 
 	// распеределение ребер с ведущего по всем ведомым узлам (разбиение графа на части)
-	if (rank == MASTER_RANK) {
+	if rank == MASTER_RANK {
 		err = master.SendAllEdges()
 	} else {
 		err = slave.GetEdges()
@@ -73,48 +80,21 @@ func Run(conf *algo_config.AlgoConfig) error {
 	}
 	comm.Barrier()
 
-	// подсчет количества получаемых сообщений на обновление родителя
-	if (rank != MASTER_RANK) {
-		slave.countReceivingPPNumber()
+	if rank != MASTER_RANK {
+		// log.Println(slave.edges)
 	}
 
-	comm.Barrier()
-
-	// вычисляем CC
-	if (rank == MASTER_RANK) {
+	if rank == MASTER_RANK {
 		err = master.manageCCSearch()
 	} else {
-		err = slave.CCSearch()
+		err = slave.runSteps()
 	}
 	if err != nil {
 		return err
 	}
 
-	comm.Barrier()
-
-	// реализация через отправку результата на ведущий процесс
-	// if (rank == MASTER_RANK) {
-	// 	err = master.getResult()
-	// } else {
-	// 	err = slave.sendResult()
-	// }
-	// if err != nil {
-	// 	return err
-	// }
-
-	if (rank == MASTER_RANK) {
-		err = master.prepResult()
-	}
-	if err != nil {
-		return err
-	}
-	comm.Barrier()
-
-	if (rank != MASTER_RANK) {
-		err = slave.addResult()
-	}
-	if err != nil {
-		return err
+	if rank != MASTER_RANK {
+		// log.Println(slave.cc)
 	}
 
 	return nil
