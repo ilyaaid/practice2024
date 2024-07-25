@@ -43,11 +43,11 @@ func (slave *Slave) Init() error {
 
 func (slave *Slave) GetEdges() error {
 	for {
-		str, status := slave.comm.RecvString(MASTER_RANK, mpi.AnyTag)
+		edgeBytes, status := slave.comm.RecvBytes(MASTER_RANK, mpi.AnyTag)
 		recvTag := status.GetTag()
 		switch recvTag {
 		case TAG_SEND_EDGE:
-			edge, err := graph.StrToEdgeObj(str)
+			edge, err := graph.StrToEdgeObj(edgeBytes)
 			if err != nil {
 				return err
 			}

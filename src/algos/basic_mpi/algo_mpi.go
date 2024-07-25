@@ -2,34 +2,14 @@ package basic_mpi
 
 import (
 	"CC/algos/algo_config"
-	"CC/graph"
+	"CC/mympi"
+	"log"
 
 	mpi "github.com/sbromberger/gompi"
 )
 
-func Vertex2Proc(conf *algo_config.AlgoConfig, v graph.IndexType) int {
-	return int(v% graph.IndexType((conf.ProcNum))) 
-}
-
-func getSlaveRanksArray() []int {
-	arr := []int{}
-	for i := 0; i < MASTER_RANK; i++ {
-		arr = append(arr, i)
-	}
-	return arr
-}
-
-func sendTag(comm *mpi.Communicator, toProc int, tag int) {
-	comm.SendByte(0, toProc, tag)
-}
-
-func recvTag(comm *mpi.Communicator, fromProc int, tag int) mpi.Status {
-	_, status := comm.RecvByte(fromProc, tag)
-	return status
-}
-
 func Run(conf *algo_config.AlgoConfig) error {
-	rank := mpi.WorldRank()
+	rank := mympi.WorldRank()
 	// общий коммуникатор
 	comm := mpi.NewCommunicator(nil)
 
@@ -71,6 +51,14 @@ func Run(conf *algo_config.AlgoConfig) error {
 	if err != nil {
 		return err
 	}
+
+	// if rank != MASTER_RANK {
+	// 	log.Println(len(slave.edges))
+	// } else {
+	// 	log.Println(len(master.g.Edges))
+	// }
+
+	// log.Println("hello!")
 	comm.Barrier()
 
 	// подсчет количества получаемых сообщений на обновление родителя
@@ -80,17 +68,28 @@ func Run(conf *algo_config.AlgoConfig) error {
 
 	comm.Barrier()
 
+	
+
 	// вычисляем CC
 	if (rank == MASTER_RANK) {
 		err = master.manageCCSearch()
+		if err != nil {
+			log.Panicln("master.manageCCSearch:", err)
+			return err
+		}
 	} else {
 		err = slave.CCSearch()
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			log.Panicln("slave.CCSearch:", err)
+			return err
+		}
 	}
 
 	comm.Barrier()
+
+	if rank != MASTER_RANK {
+		log.Println(slave.cc)
+	}
 
 	// реализация через отправку результата на ведущий процесс
 	// if (rank == MASTER_RANK) {
@@ -102,20 +101,20 @@ func Run(conf *algo_config.AlgoConfig) error {
 	// 	return err
 	// }
 
-	if (rank == MASTER_RANK) {
-		err = master.prepResult()
-	}
-	if err != nil {
-		return err
-	}
-	comm.Barrier()
+	// if (rank == MASTER_RANK) {
+	// 	err = master.prepResult()
+	// }
+	// if err != nil {
+	// 	return err
+	// }
+	// comm.Barrier()
 
-	if (rank != MASTER_RANK) {
-		err = slave.addResult()
-	}
-	if err != nil {
-		return err
-	}
+	// if (rank != MASTER_RANK) {
+	// 	err = slave.addResult()
+	// }
+	// if err != nil {
+	// 	return err
+	// }
 
 	return nil
 }

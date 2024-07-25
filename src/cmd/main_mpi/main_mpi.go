@@ -4,21 +4,22 @@ import (
 	"CC/algos/algo2run"
 	"CC/algos/algo_config"
 	"CC/flag_handler"
+	"CC/mympi"
 	"fmt"
 	"log"
+
 	// "os"
 
-	"github.com/sbromberger/gompi"
 )
 
 func main() {
 	var err error
 
-	mpi.Start(false)
-	defer mpi.Stop()
+	mympi.Start()
+	defer mympi.Stop()
 
 	// Настройка логов
-	log.SetPrefix("======= MPI Proc (" + fmt.Sprintf("%d", mpi.WorldRank()) + ") =======\n")
+	log.SetPrefix("======= MPI Proc (" + fmt.Sprintf("%d", mympi.WorldRank()) + ") =======\n")
 	log.SetFlags(log.Lmsgprefix)
 
 	// TODO попытаться добавить вывод в файл
@@ -37,16 +38,16 @@ func main() {
 
 	conf, err := algo_config.StrToObj(fh.Conf)
 	if err != nil {
-		log.Panicln(err)
+		log.Panicln("main_mpi StrToObj:", err)
 	}
 
 	runFunc, err := algo2run.GetRun(fh.Algo)
 	if err != nil {
-		log.Panicln(err)
+		log.Panicln("main_mpi GetRun:", err)
 	}
 
 	err = runFunc(conf)
 	if err != nil {
-		log.Panicln(err)
+		log.Panicln("main_mpi runFunc:", err)
 	}
 }

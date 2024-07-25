@@ -1,8 +1,10 @@
 package basic_mpi
 
+
+
 const (
 	// для стадии распределения ребер
-	TAG_SEND_EDGE = iota
+	TAG_SEND_EDGE = iota + 1
 
 	// Для алгоритма CC
 	TAG_IS_CHANGED

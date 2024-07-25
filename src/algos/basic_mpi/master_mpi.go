@@ -25,6 +25,18 @@ type Master struct {
 	g *graph.Graph
 }
 
+func (master *Master) BcastSend(mes []byte, tag int) {
+	for i := 0; i < master.conf.ProcNum; i++ {
+		sendMes(master.comm, mes, i, tag)
+	}
+}
+
+func (master *Master) BcastSendTag(tag int) {
+	for i := 0; i < master.conf.ProcNum; i++ {
+		sendTag(master.comm, i, tag)
+	}
+}
+
 func (master *Master) Init() error {
 	var err error
 	master.g, err = master.conf.GrIO.Read()
@@ -38,29 +50,23 @@ func (master *Master) Init() error {
 func (master *Master) SendAllEdges() error {
 	for _, edge := range master.g.Edges {
 		proc1, proc2 := Vertex2Proc(master.conf, edge.V1), Vertex2Proc(master.conf, edge.V2)
-		edgeStr, err := edge.ToStr()
+		edgeBytes, err := edge.ToBytes()
 		if err != nil {
 			return err
 		}
 
-		master.comm.SendString(edgeStr, proc1, TAG_SEND_EDGE)
+		sendMes(master.comm, edgeBytes, proc1, TAG_SEND_EDGE)
 		if proc1 != proc2 {
 			edge.V1, edge.V2 = edge.V2, edge.V1
-			edgeStr, err := edge.ToStr()
+			edgeBytes, err := edge.ToBytes()
 			if err != nil {
 				return err
 			}
-			master.comm.SendString(edgeStr, proc2, TAG_SEND_EDGE)
+			sendMes(master.comm, edgeBytes, proc2, TAG_SEND_EDGE)
 		}
 	}
-	master.BcastSend(" ", TAG_NEXT_PHASE)
+	master.BcastSendTag(TAG_NEXT_PHASE)
 	return nil
-}
-
-func (master *Master) BcastSend(message string, tag int) {
-	for i := 0; i < master.conf.ProcNum; i++ {
-		master.comm.SendString(message, i, tag)
-	}
 }
 
 // Управление алгоритмом CC
@@ -70,21 +76,20 @@ func (master *Master) manageCCSearch() error {
 		changed = false
 		for i := 0; i < master.conf.ProcNum; i++ {
 			status := recvTag(master.comm, i, mpi.AnyTag)
-			if err := status.GetError(); err != 0 {
-				return fmt.Errorf("master.manageCCSearch: MPI_ERROR %d", err)
-			}
-			switch tag := status.GetTag(); tag {
-			case TAG_IS_CHANGED:
+			if tag := status.GetTag(); 
+			tag == TAG_IS_CHANGED  {
 				changed = true
-			case TAG_IS_NOT_CHANGED:
+			} else if tag == TAG_IS_NOT_CHANGED {
 				continue
+			} else {
+				return fmt.Errorf("wrong TAG =%d", tag)
 			}
 		}
 		if changed {
-			master.BcastSend(" ", TAG_CONTINUE_CC)
+			master.BcastSendTag(TAG_CONTINUE_CC)
 		}
 	}
-	master.BcastSend(" ", TAG_NEXT_PHASE)
+	master.BcastSendTag(TAG_NEXT_PHASE)
 	return nil
 }
 
@@ -130,6 +135,6 @@ func (master *Master) prepResult() error {
 		return err
 	}
 
-	master.BcastSend(resDirAlgoPath, TAG_SEND_RESULT_PATH)
+	master.BcastSend([]byte(resDirAlgoPath), TAG_SEND_RESULT_PATH)
 	return nil
 }

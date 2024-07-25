@@ -33,7 +33,7 @@ func main() {
 
 	graph, err := adapterFunc(&algoConfig)
 	if (err != nil) {
-		log.Panicln(err)
+		log.Panicln("main adapterFunc:", err)
 	}
 
 	log.Println(graph.CC)

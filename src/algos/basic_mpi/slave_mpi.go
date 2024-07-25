@@ -46,17 +46,15 @@ func (slave *Slave) Init() error {
 
 func (slave *Slave) GetEdges() error {
 	for {
-		str, status := slave.comm.RecvString(MASTER_RANK, mpi.AnyTag)
-		recvTag := status.GetTag()
-		switch recvTag {
-		case TAG_SEND_EDGE:
+		str, status := recvMes(slave.comm, MASTER_RANK, mpi.AnyTag)
+		if tag := status.GetTag();
+		tag == TAG_SEND_EDGE {
 			edge, err := graph.StrToEdgeObj(str)
 			if err != nil {
 				return err
 			}
 
 			slave.edges = append(slave.edges, *edge)
-
 			// добавление вершин в CC
 			slave.cc[edge.V1] = edge.V1
 			if slave.IsOwnerOfVertex(edge.V2) {
@@ -64,12 +62,13 @@ func (slave *Slave) GetEdges() error {
 			} else {
 				slave.remotecc[edge.V2] = edge.V2
 			}
-		case TAG_NEXT_PHASE:
-			return nil
-		default:
-			return fmt.Errorf("slave.GetEdges: Wrong TAG %d", recvTag)
+		} else if tag == TAG_NEXT_PHASE {
+			break
+		} else {
+			return fmt.Errorf("master.GetEdges: wrong TAG=%v", tag)
 		}
 	}
+	return nil
 }
 
 // Считаем количество получаемых сообщений на одном этапе
@@ -112,35 +111,49 @@ func (slave *Slave) runHooking() {
 	}
 }
 
-func (slave *Slave) sendPP(remoteV graph.IndexType, proposedParent graph.IndexType, toProc int) {
-	slave.slavesComm.SendUInt32s(
-		[]uint32{uint32(remoteV), uint32(proposedParent)}, toProc, TAG_SEND_PP)
+type PPnode struct {
+	RemoteV graph.IndexType
+	PP      graph.IndexType
+}
+
+func (slave *Slave) sendPP(ppnode *PPnode, toID int) error {
+	ppnodeBytes, err := json.Marshal(ppnode)
+	if err != nil {
+		return err
+	}
+	sendMes(slave.comm, ppnodeBytes, toID, TAG_SEND_PP)
+	// log.Println("send:", ppnodeBytes, toID)
+	return nil
 }
 
 func (slave *Slave) sendingPP() error {
 	for remoteV, proposedParent := range slave.remotecc {
 		remoteProc := Vertex2Proc(slave.conf, remoteV)
-		slave.sendPP(remoteV, proposedParent, remoteProc)
+		slave.sendPP(&PPnode{remoteV, proposedParent}, remoteProc)
 	}
 	return nil
 }
 
-func (slave *Slave) receivePP() (graph.IndexType, graph.IndexType, error) {
-	mes, status := slave.slavesComm.RecvUint32s(mpi.AnySource, TAG_SEND_PP)
-	if err := status.GetError(); err != 0 {
-		return 0, 0, fmt.Errorf("slave.receivePP: MPI_ERROR=%d", err)
+func (slave *Slave) receivePP() (*PPnode, error) {
+	mes, _ := recvMes(slave.comm, mpi.AnySource, TAG_SEND_PP)
+	// log.Println("recv:", mes, status.GetSource(), status.GetTag())
+
+	var ppnode PPnode
+	err := json.Unmarshal(mes, &ppnode)
+	if err != nil {
+		return nil, err
 	}
-	return graph.IndexType(mes[0]), graph.IndexType(mes[1]), nil
+	return &ppnode, nil
 }
 
 func (slave *Slave) receivingPP() error {
 	for i := 0; i < slave.ppNumber; i++ {
-		v, pp, err := slave.receivePP()
+		ppnode, err := slave.receivePP()
 		if err != nil {
 			return err
 		}
-		if slave.cc[v] > pp {
-			slave.cc[v] = pp
+		if slave.cc[ppnode.RemoteV] > ppnode.PP {
+			slave.cc[ppnode.RemoteV] = ppnode.PP
 			slave.changed = true
 		}
 	}
@@ -152,7 +165,7 @@ func (slave *Slave) runPP() error {
 	g.SetLimit(2)
 	g.Go(slave.receivingPP)
 	g.Go(slave.sendingPP)
-	
+
 	if err := g.Wait(); err != nil {
 		return err
 	}
@@ -175,12 +188,13 @@ func (slave *Slave) CCSearch() error {
 		}
 
 		status := recvTag(slave.comm, MASTER_RANK, mpi.AnyTag)
-		if tag := status.GetTag(); tag == TAG_CONTINUE_CC {
+		if tag := status.GetTag(); 
+		tag == TAG_CONTINUE_CC {
 			continue
-		} else if tag == TAG_NEXT_PHASE { 
+		} else if tag == TAG_NEXT_PHASE {
 			break
 		} else {
-			return fmt.Errorf("slave.CCSearch: Wrong TAG %d from MASTER_RANK", tag)
+			return fmt.Errorf("wrong tag=%d from MASTER_RANK", tag)
 		}
 	}
 	return nil

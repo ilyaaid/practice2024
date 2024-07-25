@@ -3,6 +3,7 @@ package algo_config
 import (
 	"CC/graph"
 	"encoding/json"
+	"log"
 )
 
 // при изменении или добавлении полей обязательно менять метод UnmarshalJSON
@@ -46,6 +47,7 @@ func StrToObj(str string) (*AlgoConfig, error) {
 	var obj AlgoConfig
 	err := json.Unmarshal([]byte(str), &obj)
 	if (err != nil) {
+		log.Println("conf strtoobj: problem with unmarshal", err)
 		return nil, err
 	}
 	return &obj, nil
