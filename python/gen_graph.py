@@ -2,6 +2,7 @@ import math
 import random 
 import tqdm
 import pandas as pd
+import sys
 
 def genBigGraph(p, q):
     # 2*10^9 узлов
@@ -45,4 +46,5 @@ def genBigGraph(p, q):
         index=False, header=False
     )
 
-genBigGraph(1, 1)
+if len (sys.argv) > 2:
+    genBigGraph(int(sys.argv[1]), int(sys.argv[2]))

@@ -3,17 +3,16 @@ package fastsv_mpi
 import (
 	"CC/algos/algo_config"
 	"CC/algos/algo_types"
-	"CC/graph"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 )
 
-func Adapter(conf *algo_config.AlgoConfig) (*graph.Graph, error) {
+func Adapter(conf *algo_config.AlgoConfig) (error) {
 	confStr, err := conf.ObjToStr()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	cmd := exec.Command(
@@ -35,7 +34,7 @@ func Adapter(conf *algo_config.AlgoConfig) (*graph.Graph, error) {
 
 	// ждем, пока mpi отработает и выводим, что он написал
 	if err := cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("error in algo %s:\n%s", algo_types.ALGO_fastsv_mpi, err)
+		return fmt.Errorf("error in algo %s:\n%s", algo_types.ALGO_fastsv_mpi, err)
 	}
-	return &graph.Graph{}, nil
+	return nil
 }

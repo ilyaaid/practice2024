@@ -2,14 +2,15 @@ package basic
 
 import (
 	"CC/algos/algo_config"
-	"CC/graph"
+	"log"
 )
 
-func Adapter(conf *algo_config.AlgoConfig) (*graph.Graph, error) {
+func Adapter(conf *algo_config.AlgoConfig) (error) {
 	g, err := conf.GrIO.Read()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	CCSearch(g)
-	return g, nil
+	log.Println(g.CC)
+	return nil
 }

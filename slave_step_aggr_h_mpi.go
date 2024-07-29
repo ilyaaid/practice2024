@@ -1,16 +1,16 @@
 package fastsv_mpi
 
 import (
+	"CC/mympi"
 	"encoding/json"
 	"sync"
 
-	mpi "github.com/sbromberger/gompi"
 	"golang.org/x/sync/errgroup"
 )
 
 func (slave *Slave) receivingAggrH(chainsCnt *int, mutex *sync.Mutex) error {
 	for {
-		mesStr, status := slave.comm.RecvString(mpi.AnySource, mpi.AnyTag)
+		mesStr, status := mympi.RecvMes(slave.comm, mympi.AnySource, mympi.AnyTag)
 		tag := status.GetTag()
 		if tag == TAG_END_STEP {
 			break
@@ -37,7 +37,7 @@ func (slave *Slave) receivingAggrH(chainsCnt *int, mutex *sync.Mutex) error {
 			mutex.Lock()
 			*chainsCnt = *chainsCnt - 1
 			if *chainsCnt == 0 {
-				sendTag(slave.comm, MASTER_RANK, TAG_END_STEP)
+				mympi.SendTag(slave.comm, MASTER_RANK, TAG_END_STEP)
 				*chainsCnt = -1
 			}
 			mutex.Unlock()
@@ -58,7 +58,7 @@ func (slave *Slave) sendAggrH(mes *MessageMPI, tag int, chainsCnt *int, mutex *s
 			if err != nil {
 				return err
 			}
-			slave.comm.SendString(string(mesBytes), toProc, tag)
+			mympi.SendMes(slave.comm, mesBytes, toProc, tag)
 
 			break
 		}
@@ -73,7 +73,7 @@ func (slave *Slave) sendAggrH(mes *MessageMPI, tag int, chainsCnt *int, mutex *s
 			if err != nil {
 				return err
 			}
-			slave.comm.SendString(string(mesBytes), toProc, tag)
+			mympi.SendMes(slave.comm, mesBytes, toProc, tag)
 			break
 		}
 		fallthrough
@@ -87,7 +87,7 @@ func (slave *Slave) sendAggrH(mes *MessageMPI, tag int, chainsCnt *int, mutex *s
 			mutex.Lock()
 			*chainsCnt = *chainsCnt - 1
 			if *chainsCnt == 0 {
-				sendTag(slave.comm, MASTER_RANK, TAG_END_STEP)
+				mympi.SendTag(slave.comm, MASTER_RANK, TAG_END_STEP)
 				*chainsCnt = -1
 			}
 			mutex.Unlock()
@@ -96,7 +96,7 @@ func (slave *Slave) sendAggrH(mes *MessageMPI, tag int, chainsCnt *int, mutex *s
 			if err != nil {
 				return err
 			}
-			slave.comm.SendString(string(mesBytes), startProc, tag)
+			mympi.SendMes(slave.comm, mesBytes, startProc, tag)
 		}
 	}
 	return nil

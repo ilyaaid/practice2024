@@ -7,17 +7,15 @@ import (
 	"CC/mympi"
 	"fmt"
 	"log"
-
 	// "os"
-
 )
 
 func main() {
 	var err error
 
-	mympi.Start()
+	mympi.Start(false)
 	defer mympi.Stop()
-
+	
 	// Настройка логов
 	log.SetPrefix("======= MPI Proc (" + fmt.Sprintf("%d", mympi.WorldRank()) + ") =======\n")
 	log.SetFlags(log.Lmsgprefix)

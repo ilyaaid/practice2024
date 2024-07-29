@@ -2,22 +2,25 @@ package basic_mpi
 
 import (
 	"CC/algos/algo_config"
+	"CC/graph"
 	"CC/mympi"
 	"log"
-
-	mpi "github.com/sbromberger/gompi"
 )
+
+func Vertex2Proc(conf *algo_config.AlgoConfig, v graph.IndexType) int {
+	return int(v % graph.IndexType((conf.ProcNum)))
+}
 
 func Run(conf *algo_config.AlgoConfig) error {
 	rank := mympi.WorldRank()
 	// общий коммуникатор
-	comm := mpi.NewCommunicator(nil)
+	comm := mympi.WorldCommunicator()
 
 	MASTER_RANK = conf.ProcNum
 	comm.Barrier()
 
 	// коммуникатор только для ведомых процессов (чтобы ставить барьеры только для них)
-	slavesComm := mpi.NewCommunicator(getSlaveRanksArray())
+	slavesComm := mympi.SlavesCommunicator(MASTER_RANK)
 
 	var master Master
 	var slave Slave
@@ -58,7 +61,6 @@ func Run(conf *algo_config.AlgoConfig) error {
 	// 	log.Println(len(master.g.Edges))
 	// }
 
-	// log.Println("hello!")
 	comm.Barrier()
 
 	// подсчет количества получаемых сообщений на обновление родителя
@@ -68,7 +70,33 @@ func Run(conf *algo_config.AlgoConfig) error {
 
 	comm.Barrier()
 
-	
+	//тест
+	// if rank == MASTER_RANK {
+	// 	log.Println("sending")
+	// 	sendMes(master.comm, []byte{234, 24, 54, 56}, 0, TAG_IS_CHANGED)
+	// 	log.Println("sended")
+	// } else {
+	// 	if (slave.rank == 0) {
+	// 		is := false
+	// 		var status *mympi.Status
+	// 		for !is {
+	// 			is, status = slave.comm.Iprobe(MASTER_RANK, TAG_IS_CHANGED)
+	// 		}
+	// 		log.Println(is, status.GetCount(mympi.Byte))
+	// 		status = slave.comm.Probe(MASTER_RANK, TAG_IS_CHANGED)
+	// 		log.Println(status.GetCount(mympi.Byte))
+	// 		mes, _ := slave.comm.RecvBytes(MASTER_RANK, TAG_IS_CHANGED)
+	// 		log.Println(mes)
+	// 		// buf := make([]byte, 1)
+	// 		// slave.comm.RecvPreallocBytes(buf, MASTER_RANK, TAG_IS_CHANGED)
+	// 		// log.Println(buf)
+	// 		// recvMes(slave.comm, MASTER_RANK, TAG_IS_CHANGED)
+	// 	}
+	// }
+
+	if rank == MASTER_RANK {
+		log.Println("==================")
+	}
 
 	// вычисляем CC
 	if (rank == MASTER_RANK) {
@@ -85,21 +113,23 @@ func Run(conf *algo_config.AlgoConfig) error {
 		}
 	}
 
+	// log.Println(mympi.X_min, mympi.Len_min, mympi.Len_max)
+
 	comm.Barrier()
 
-	if rank != MASTER_RANK {
-		log.Println(slave.cc)
-	}
+	// if rank != MASTER_RANK {
+	// 	log.Println(slave.cc)
+	// }
 
 	// реализация через отправку результата на ведущий процесс
-	// if (rank == MASTER_RANK) {
-	// 	err = master.getResult()
-	// } else {
-	// 	err = slave.sendResult()
-	// }
-	// if err != nil {
-	// 	return err
-	// }
+	if (rank == MASTER_RANK) {
+		err = master.getResult()
+	} else {
+		err = slave.sendResult()
+	}
+	if err != nil {
+		return err
+	}
 
 	// if (rank == MASTER_RANK) {
 	// 	err = master.prepResult()
@@ -115,6 +145,12 @@ func Run(conf *algo_config.AlgoConfig) error {
 	// if err != nil {
 	// 	return err
 	// }
+
+	if (rank == MASTER_RANK) {
+		log.Println(master.g.CC)
+	} else {
+		// log.Println(slave.cc)
+	}
 
 	return nil
 }

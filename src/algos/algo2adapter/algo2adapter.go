@@ -6,11 +6,10 @@ import (
 	"CC/algos/basic"
 	"CC/algos/basic_mpi"
 	"CC/algos/fastsv_mpi"
-	"CC/graph"
 	"fmt"
 )
 
-type AdapterFuncType func(*algo_config.AlgoConfig) (*graph.Graph, error)
+type AdapterFuncType func(*algo_config.AlgoConfig) (error)
 
 var algo2adapter = map[string]AdapterFuncType{
 	algo_types.ALGO_basic:     basic.Adapter,

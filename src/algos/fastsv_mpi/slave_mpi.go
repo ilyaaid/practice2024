@@ -3,19 +3,18 @@ package fastsv_mpi
 import (
 	"CC/algos/algo_config"
 	"CC/graph"
+	"CC/mympi"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path"
-
-	mpi "github.com/sbromberger/gompi"
 )
 
 type Slave struct {
 	// параметры для MPI
 	rank       int
-	comm       *mpi.Communicator
-	slavesComm *mpi.Communicator
+	comm       *mympi.Communicator
+	slavesComm *mympi.Communicator
 
 	// кофигурация для алгоритма
 	conf *algo_config.AlgoConfig
@@ -26,6 +25,7 @@ type Slave struct {
 	changed bool
 	cc      map[graph.IndexType]graph.IndexType
 	ccnext  map[graph.IndexType]graph.IndexType
+	chainsCnt int
 }
 
 func (slave *Slave) IsOwnerOfVertex(v graph.IndexType) bool {
@@ -43,7 +43,7 @@ func (slave *Slave) Init() error {
 
 func (slave *Slave) GetEdges() error {
 	for {
-		edgeBytes, status := slave.comm.RecvBytes(MASTER_RANK, mpi.AnyTag)
+		edgeBytes, status := slave.comm.RecvBytes(MASTER_RANK, mympi.AnyTag)
 		recvTag := status.GetTag()
 		switch recvTag {
 		case TAG_SEND_EDGE:
@@ -79,7 +79,7 @@ func (slave *Slave) runSteps() error {
 		if err != nil {
 			return err
 		}
-		slave.slavesComm.Barrier()
+		// slave.slavesComm.Barrier()
 		// err = slave.runAggrH()
 		// if err != nil {
 		// 	return err
@@ -94,12 +94,12 @@ func (slave *Slave) runSteps() error {
 		copyCC(slave.cc, slave.ccnext)
 
 		if slave.changed {
-			sendTag(slave.comm, MASTER_RANK, TAG_IS_CHANGED)
+			mympi.SendTag(slave.comm, MASTER_RANK, TAG_IS_CHANGED)
 		} else {
-			sendTag(slave.comm, MASTER_RANK, TAG_IS_NOT_CHANGED)
+			mympi.SendTag(slave.comm, MASTER_RANK, TAG_IS_NOT_CHANGED)
 		}
 
-		status := recvTag(slave.comm, MASTER_RANK, mpi.AnyTag)
+		status := mympi.RecvTag(slave.comm, MASTER_RANK, mympi.AnyTag)
 		switch tag := status.GetTag(); tag {
 		case TAG_CONTINUE_CC:
 			continue
@@ -116,9 +116,9 @@ func (slave *Slave) runSteps() error {
 
 func (slave *Slave) addResult() error {
 	//получаем путь к папке, общей для всех слейвов (для записи результата в нее)
-	resDirPath, _ := slave.comm.RecvString(MASTER_RANK, TAG_SEND_RESULT_PATH)
+	resDirPath, _ := mympi.RecvMes(slave.comm, MASTER_RANK, TAG_SEND_RESULT_PATH)
 
-	resFilePath := path.Join(resDirPath, fmt.Sprintf("slave_%d.txt", slave.rank))
+	resFilePath := path.Join(string(resDirPath), fmt.Sprintf("slave_%d.txt", slave.rank))
 	file, err := os.Create(resFilePath)
 	if err != nil {
 		return err

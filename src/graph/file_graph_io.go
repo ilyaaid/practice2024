@@ -55,12 +55,21 @@ func readFromCsvFile(file *os.File) (*Graph, error) {
 		}
 		return ind
 	}
+	
+	cc := make(map[IndexType]IndexType)
 	for _, row := range records {
 		v1Ind := getIndex(row[0])
 		v2Ind := getIndex(row[1])
-		edges = append(edges, Edge{V1: v1Ind, V2:v2Ind})
+
+		edge := Edge{V1: v1Ind, V2:v2Ind}
+		edges = append(edges, edge)
+		cc[edge.V1] = edge.V1
+		cc[edge.V2] = edge.V2
 	}
-	return &Graph{VertexCnt: indexCount, Edges: edges, Index2str: index2str}, nil
+	return &Graph{ 
+		Edges: edges, 
+		Index2str: index2str, 
+		CC: cc}, nil
 }
 
 

@@ -3,22 +3,21 @@ package basic_mpi
 import (
 	"CC/algos/algo_config"
 	"CC/algos/algo_types"
-	"CC/graph"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 )
 
-func Adapter(conf *algo_config.AlgoConfig) (*graph.Graph, error) {
+func Adapter(conf *algo_config.AlgoConfig) (error) {
 	confStr, err := conf.ObjToStr()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	cmd := exec.Command(
 		"mpirun",
-		"-n", fmt.Sprintf("%d", conf.ProcNum + 1), // +1 так, как добавляется ведущий процесс (master)
+		"-np", fmt.Sprintf("%d", conf.ProcNum + 1), // +1 так, как добавляется ведущий процесс (master)
 		"-oversubscribe",
 		"bin/main_mpi",
 		"-algo", algo_types.ALGO_basic_mpi,
@@ -35,7 +34,7 @@ func Adapter(conf *algo_config.AlgoConfig) (*graph.Graph, error) {
 
 	// ждем, пока mpi отработает и выводим, что он написал
 	if err := cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("error in algo %s:\n%s", algo_types.ALGO_basic_mpi, err)
+		return fmt.Errorf("error in algo %s:\n%s", algo_types.ALGO_basic_mpi, err)
 	}
-	return &graph.Graph{}, nil
+	return nil
 }

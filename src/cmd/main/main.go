@@ -31,10 +31,8 @@ func main() {
 		ProcNum: fh.Proc,
 	}
 
-	graph, err := adapterFunc(&algoConfig)
+	err = adapterFunc(&algoConfig)
 	if (err != nil) {
 		log.Panicln("main adapterFunc:", err)
 	}
-
-	log.Println(graph.CC)
 }
