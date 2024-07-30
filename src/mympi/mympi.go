@@ -145,11 +145,6 @@ func (o *Communicator) Probe(source int, tag int) *Status {
 }
 
 func (o *Communicator) SendBytes(vals []byte, toID int, tag int) {
-	// log.Println("send:", "len=", vals, "\n", "toID=", toID, "tag=", tag)
-	// if len(vals) > 1 && vals[len(vals) - 1] == 0 {
-	// 	log.Panicln("hello!")
-	// }
-
 	var buf unsafe.Pointer
 	if len(vals) == 0 {
 		buf = unsafe.Pointer(nil)
@@ -160,38 +155,19 @@ func (o *Communicator) SendBytes(vals []byte, toID int, tag int) {
 
 }
 
-var X_min = 0
-var Len_min = 10000
-var Len_max = 0
-
 func (o *Communicator) RecvBytes(fromID int, tag int) ([]byte, Status) {
 	l := o.Probe(fromID, tag).GetCount(Byte)
 	_, st := o.Iprobe(fromID, tag)
 	l_i := st.GetCount(Byte)
-	if l != l_i {
-		log.Println(l, l_i)
-	}
 	l_i = int(math.Max(float64(l), float64(l_i)))
 
 	buf := make([]byte, l_i)
-	cnt := 0
 	status := o.RecvPreallocBytes(buf, len(buf), fromID, tag)
+
+	// убираем лишние нули в конце
 	for len(buf) > 0 && buf[len(buf)-1] == 0 {
 		buf = buf[:len(buf)-1]
-		cnt++
 	}
-
-	x := cnt - l - 1
-	X_min = int(math.Min(float64(x), float64(X_min)))
-	if len(buf) > 0 {
-		Len_min = int(math.Min(float64(len(buf)), float64(Len_min)))
-	}
-	Len_max = int(math.Max(float64(len(buf)), float64(Len_max)))
-	// log.Println(len(buf))
-	// if (x == -4) {
-	// 	log.Println(len(buf), buf, x)
-	// }
-	// log.Println("recv", "len=", buf, "\n", "fromID=", status.GetSource(), "tag=", tag)
 	return buf, status
 }
 

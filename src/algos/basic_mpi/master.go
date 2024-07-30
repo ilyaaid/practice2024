@@ -23,7 +23,7 @@ type Master struct {
 
 func (master *Master) BcastSend(mes []byte, tag int) {
 	for i := 0; i < master.conf.ProcNum; i++ {
-		mympi.SendMes(master.comm, mes, i, tag)
+		master.comm.SendBytes(mes, i, tag)
 	}
 }
 
@@ -51,14 +51,14 @@ func (master *Master) SendAllEdges() error {
 			return err
 		}
 
-		mympi.SendMes(master.comm, edgeBytes, proc1, TAG_SEND_EDGE)
+		master.comm.SendBytes(edgeBytes, proc1, TAG_SEND_EDGE)
 		if proc1 != proc2 {
 			edge.V1, edge.V2 = edge.V2, edge.V1
 			edgeBytes, err := edge.ToBytes()
 			if err != nil {
 				return err
 			}
-			mympi.SendMes(master.comm, edgeBytes, proc2, TAG_SEND_EDGE)
+			master.comm.SendBytes(edgeBytes, proc2, TAG_SEND_EDGE)
 		}
 	}
 	master.BcastSendTag(TAG_NEXT_PHASE)

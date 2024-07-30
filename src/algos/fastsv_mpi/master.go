@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-
 )
 
 var MASTER_RANK int = 0
@@ -61,7 +60,7 @@ func (master *Master) manageCCSearch() error {
 	changed := true
 
 	for changed {
-		for step := 0; step < 1; step++ {
+		for step := 0; step < 3; step++ {
 			end_step_cnt := 0
 			for i := 0; i < master.conf.ProcNum; i++ {
 				_ = mympi.RecvTag(master.comm, mympi.AnySource, TAG_END_STEP)
@@ -74,7 +73,7 @@ func (master *Master) manageCCSearch() error {
 
 		changed = false
 		for i := 0; i < master.conf.ProcNum; i++ {
-			status := mympi.RecvTag(master.comm, i, mympi.AnyTag)
+			status := mympi.RecvTag(master.comm, mympi.AnySource, mympi.AnyTag)
 			switch tag := status.GetTag(); tag {
 			case TAG_IS_CHANGED:
 				changed = true
@@ -95,18 +94,21 @@ func (master *Master) manageCCSearch() error {
 // Результат
 
 func (master *Master) getResult() error {
+	
 	for i := 0; i < master.conf.ProcNum; i++ {
-		mes, status := mympi.RecvMes(master.comm, i, TAG_SEND_RESULT)
-		if err := status.GetError(); err != 0 {
-			return fmt.Errorf("master.getResult: MPI_ERROR %d", err)
-		}
+		mes, _ := master.comm.RecvBytes(i, TAG_SEND_RESULT)
 
 		var cc map[graph.IndexType]graph.IndexType
-		err := json.Unmarshal([]byte(mes), &cc)
+		err := json.Unmarshal(mes, &cc)
 		if err != nil {
 			return err
 		}
+
+		for v, vcc := range cc {
+			master.g.CC[v] = vcc
+		}
 	}
+	
 	return nil
 }
 
@@ -118,6 +120,6 @@ func (master *Master) prepResult() error {
 	if err != nil {
 		return fmt.Errorf("master.prepResult: folder creation error")
 	}
-	mympi.BcastSend([]byte(resDirPath), MASTER_RANK, TAG_SEND_RESULT_PATH)
+	mympi.BcastSendBytes([]byte(resDirPath), MASTER_RANK, TAG_SEND_RESULT_PATH)
 	return nil
 }

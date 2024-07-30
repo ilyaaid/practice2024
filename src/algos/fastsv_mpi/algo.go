@@ -74,6 +74,8 @@ func Run(conf *algo_config.AlgoConfig) error {
 
 	if rank == MASTER_RANK {
 		log.Println("distributed edges")
+	} else {
+		// log.Println(slave.edges)
 	}
 
 	comm.Barrier()
@@ -87,9 +89,20 @@ func Run(conf *algo_config.AlgoConfig) error {
 		return err
 	}
 
-	// if rank != MASTER_RANK {
-	// 	log.Println(slave.cc)
-	// }
+
+	comm.Barrier()
+
+	if rank == MASTER_RANK {
+		master.getResult()
+	} else {
+		slave.sendResult()
+	}
+
+	comm.Barrier()
+
+	if rank == MASTER_RANK {
+		log.Println(master.g.CC)
+	}
 
 	return nil
 }

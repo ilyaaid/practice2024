@@ -1,15 +1,14 @@
-package basic_mpi
+package adapter
 
 import (
 	"CC/algos/algo_config"
-	"CC/algos/algo_types"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 )
 
-func Adapter(conf *algo_config.AlgoConfig) (error) {
+func AdapterMPI(algo string, conf *algo_config.AlgoConfig) (error) {
 	confStr, err := conf.ObjToStr()
 	if err != nil {
 		return err
@@ -20,7 +19,7 @@ func Adapter(conf *algo_config.AlgoConfig) (error) {
 		"-np", fmt.Sprintf("%d", conf.ProcNum + 1), // +1 так, как добавляется ведущий процесс (master)
 		"-oversubscribe",
 		"bin/main_mpi",
-		"-algo", algo_types.ALGO_basic_mpi,
+		"-algo", algo,
 		"-conf", confStr,
 	)
 	log.Println("COMMAND FOR MPI: \n", cmd)
@@ -34,7 +33,7 @@ func Adapter(conf *algo_config.AlgoConfig) (error) {
 
 	// ждем, пока mpi отработает и выводим, что он написал
 	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("error in algo %s:\n%s", algo_types.ALGO_basic_mpi, err)
+		return fmt.Errorf("error in algo %s:\n%s", algo, err)
 	}
 	return nil
 }

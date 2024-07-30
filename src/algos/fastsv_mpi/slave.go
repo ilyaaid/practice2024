@@ -25,7 +25,6 @@ type Slave struct {
 	changed bool
 	cc      map[graph.IndexType]graph.IndexType
 	ccnext  map[graph.IndexType]graph.IndexType
-	chainsCnt int
 }
 
 func (slave *Slave) IsOwnerOfVertex(v graph.IndexType) bool {
@@ -70,26 +69,32 @@ func (slave *Slave) GetEdges() error {
 }
 
 // Далее все функции для алгоритма CC
-
 func (slave *Slave) runSteps() error {
 	is_next_phase := false
+	step := Step{slave: slave}
+	step.Init()
+
 	for !is_next_phase {
 		slave.changed = false
-		err := slave.runStochH()
+
+		err := step.run(STEP_STOCH_H)
 		if err != nil {
 			return err
 		}
-		// slave.slavesComm.Barrier()
-		// err = slave.runAggrH()
-		// if err != nil {
-		// 	return err
-		// }
-		// slave.slavesComm.Barrier()
-		// err = slave.runShortcutH()
-		// if err != nil {
-		// 	return err
-		// }
-		// slave.slavesComm.Barrier()
+
+		slave.slavesComm.Barrier()
+
+		err = step.run(STEP_AGGR_H)
+		if err != nil {
+			return err
+		}
+
+		slave.slavesComm.Barrier()
+
+		err = step.run(STEP_SHORTCUT_H)
+		if err != nil {
+			return err
+		}
 
 		copyCC(slave.cc, slave.ccnext)
 
@@ -116,7 +121,7 @@ func (slave *Slave) runSteps() error {
 
 func (slave *Slave) addResult() error {
 	//получаем путь к папке, общей для всех слейвов (для записи результата в нее)
-	resDirPath, _ := mympi.RecvMes(slave.comm, MASTER_RANK, TAG_SEND_RESULT_PATH)
+	resDirPath, _ := slave.comm.RecvBytes(MASTER_RANK, TAG_SEND_RESULT_PATH)
 
 	resFilePath := path.Join(string(resDirPath), fmt.Sprintf("slave_%d.txt", slave.rank))
 	file, err := os.Create(resFilePath)

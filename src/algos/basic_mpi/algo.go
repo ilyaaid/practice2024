@@ -131,12 +131,15 @@ func Run(conf *algo_config.AlgoConfig) error {
 		return err
 	}
 
+	comm.Barrier()
+
 	// if (rank == MASTER_RANK) {
 	// 	err = master.prepResult()
 	// }
 	// if err != nil {
 	// 	return err
 	// }
+
 	// comm.Barrier()
 
 	// if (rank != MASTER_RANK) {
@@ -148,9 +151,6 @@ func Run(conf *algo_config.AlgoConfig) error {
 
 	if (rank == MASTER_RANK) {
 		log.Println(master.g.CC)
-	} else {
-		// log.Println(slave.cc)
 	}
-
 	return nil
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"CC/algos/algo2adapter"
+	"CC/algos/adapter"
 	"CC/algos/algo_config"
 	"CC/flag_handler"
 	"CC/graph"
@@ -21,7 +21,7 @@ func main() {
 
 	algo := fh.Algo
 	// получаем соответствующую функцию адаптера для получения компонент связности
-	adapterFunc, err := algo2adapter.GetAdapter(algo)
+	adapterFunc, err := adapter.GetAdapter(algo)
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -31,7 +31,7 @@ func main() {
 		ProcNum: fh.Proc,
 	}
 
-	err = adapterFunc(&algoConfig)
+	err = adapterFunc(algo, &algoConfig)
 	if (err != nil) {
 		log.Panicln("main adapterFunc:", err)
 	}

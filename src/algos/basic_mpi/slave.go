@@ -45,7 +45,7 @@ func (slave *Slave) Init() error {
 
 func (slave *Slave) GetEdges() error {
 	for {
-		str, status := mympi.RecvMes(slave.comm, MASTER_RANK, mympi.AnyTag)
+		str, status := slave.comm.RecvBytes(MASTER_RANK, mympi.AnyTag)
 		if tag := status.GetTag(); tag == TAG_SEND_EDGE {
 			edge, err := graph.StrToEdgeObj(str)
 			if err != nil {
@@ -121,7 +121,7 @@ func (slave *Slave) sendPP(mutex *sync.Mutex, ppnode *PPnode, toID int) error {
 	}
 	mutex.Lock()
 	// log.Println("send lock")
-	mympi.SendMes(slave.comm, ppnodeBytes, toID, TAG_SEND_PP)
+	slave.comm.SendBytes(ppnodeBytes, toID, TAG_SEND_PP)
 	mutex.Unlock()
 	// log.Println("send unlock")
 	// log.Println("send:", ppnodeBytes, toID)
@@ -143,7 +143,7 @@ func (slave *Slave) receivePP(mutex *sync.Mutex) (*PPnode, error) {
 		is_exist, _ := slave.comm.Iprobe(mympi.AnySource, TAG_SEND_PP)
 		if is_exist {
 			// log.Println("recv lock")
-			mes, _ = mympi.RecvMes(slave.comm, mympi.AnySource, TAG_SEND_PP)
+			mes, _ = slave.comm.RecvBytes(mympi.AnySource, TAG_SEND_PP)
 			// log.Println(mes)
 			mutex.Unlock()
 			// log.Println("recv unlock")
