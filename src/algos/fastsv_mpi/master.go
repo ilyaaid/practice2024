@@ -1,7 +1,6 @@
 package fastsv_mpi
 
 import (
-	"CC/algos/algo_config"
 	"CC/graph"
 	"CC/mympi"
 	"encoding/json"
@@ -16,8 +15,7 @@ type Master struct {
 	// параметры для MPI
 	comm *mympi.Communicator
 
-	// кофигурация для алгоритма
-	conf *algo_config.AlgoConfig
+	algo *Algo
 
 	// параметры для графа
 	g *graph.Graph
@@ -25,7 +23,7 @@ type Master struct {
 
 func (master *Master) Init() error {
 	var err error
-	master.g, err = master.conf.GrIO.Read()
+	master.g, err = master.algo.conf.GrIO.Read()
 	if err != nil {
 		return err
 	}
@@ -35,7 +33,7 @@ func (master *Master) Init() error {
 // распределение ребер по процессам
 func (master *Master) SendAllEdges() error {
 	for _, edge := range master.g.Edges {
-		proc1, proc2 := Vertex2Proc(master.conf, edge.V1), Vertex2Proc(master.conf, edge.V2)
+		proc1, proc2 := master.algo.getSlave(edge.V1), master.algo.getSlave(edge.V2)
 		edgeBytes, err := edge.ToBytes()
 		if err != nil {
 			return err
@@ -62,17 +60,17 @@ func (master *Master) manageCCSearch() error {
 	for changed {
 		for step := 0; step < 3; step++ {
 			end_step_cnt := 0
-			for i := 0; i < master.conf.ProcNum; i++ {
+			for i := 0; i < master.algo.conf.ProcNum; i++ {
 				_ = mympi.RecvTag(master.comm, mympi.AnySource, TAG_END_STEP)
 				end_step_cnt++
 			}
-			if end_step_cnt == master.conf.ProcNum {
+			if end_step_cnt == master.algo.conf.ProcNum {
 				mympi.BcastSendTag(MASTER_RANK, TAG_END_STEP)
 			}
 		}
 
 		changed = false
-		for i := 0; i < master.conf.ProcNum; i++ {
+		for i := 0; i < master.algo.conf.ProcNum; i++ {
 			status := mympi.RecvTag(master.comm, mympi.AnySource, mympi.AnyTag)
 			switch tag := status.GetTag(); tag {
 			case TAG_IS_CHANGED:
@@ -95,7 +93,7 @@ func (master *Master) manageCCSearch() error {
 
 func (master *Master) getResult() error {
 	
-	for i := 0; i < master.conf.ProcNum; i++ {
+	for i := 0; i < master.algo.conf.ProcNum; i++ {
 		mes, _ := master.comm.RecvBytes(i, TAG_SEND_RESULT)
 
 		var cc map[graph.IndexType]graph.IndexType

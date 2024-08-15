@@ -8,7 +8,7 @@ func (step *Step) recvAggr(mes *MessageMPI, tag int) error {
 	switch tag {
 	case TAG_STEP_0, TAG_STEP_1:
 		step.manager.mutex.Lock()
-		mes.PPNonConst = step.slave.cc[mes.PPNonConst]
+		mes.PPNonConst = step.slave.f[mes.PPNonConst]
 		step.manager.mutex.Unlock()
 
 		tag = step.getNextTagStep(tag)
@@ -28,11 +28,11 @@ func (step *Step) recvAggr(mes *MessageMPI, tag int) error {
 func (step *Step) sendAggr(mes *MessageMPI, tag int) error {
 	switch tag {
 	case TAG_STEP_0:
-		toProc := Vertex2Proc(step.slave.conf, mes.PPNonConst)
+		toProc := step.slave.algo.getSlave(mes.PPNonConst)
 
 		if toProc == step.slave.rank {
 			step.manager.mutex.Lock()
-			mes.PPNonConst = step.slave.cc[mes.PPNonConst]
+			mes.PPNonConst = step.slave.f[mes.PPNonConst]
 			step.manager.mutex.Unlock()
 
 			tag = step.getNextTagStep(tag)
@@ -44,23 +44,23 @@ func (step *Step) sendAggr(mes *MessageMPI, tag int) error {
 		}
 		fallthrough
 	case TAG_STEP_1:
-		toProc := Vertex2Proc(step.slave.conf, mes.PPNonConst)
+		toProc := step.slave.algo.getSlave(mes.PPNonConst)
 
 		if toProc == step.slave.rank {
 			step.manager.mutex.Lock()
-			mes.PPNonConst = step.slave.cc[mes.PPNonConst]
+			mes.PPNonConst = step.slave.f[mes.PPNonConst]
 			step.manager.mutex.Unlock()
 
 			tag = step.getNextTagStep(tag)
 		} else {
 			// TODO обработка ошибок добавить
 			step.sendMessageMPI(mes, toProc, tag)
-			
+
 			return nil
 		}
 		fallthrough
 	case TAG_STEP_2:
-		toProc := Vertex2Proc(step.slave.conf, mes.V)
+		toProc := step.slave.algo.getSlave(mes.V)
 
 		if toProc == step.slave.rank {
 			step.updateCC(mes.V, mes.PPNonConst)

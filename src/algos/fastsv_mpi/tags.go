@@ -2,7 +2,7 @@ package fastsv_mpi
 
 const (
 	// для стадии распределения ребер
-	TAG_SEND_EDGE = iota
+	TAG_SEND_EDGE int = iota
 
 	//===========================
 	// Для алгоритма CC

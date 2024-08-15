@@ -46,9 +46,16 @@ func (step *Step) Init() {
 
 func (step *Step) updateCC(v graph.IndexType, pp graph.IndexType) {
 	step.manager.mutex.Lock()
-	if step.slave.ccnext[v] > pp {
-		step.slave.ccnext[v] = pp
-		step.slave.changed = true
+	if step.slave.algo.conf.Variant == VARIANT_DISC_F_PAR {
+		if step.slave.fnext[v] > pp {
+			step.slave.fnext[v] = pp
+			step.slave.fchanged = true
+		}
+	} else {
+		if step.slave.f[v] > pp {
+			step.slave.f[v] = pp
+			step.slave.fchanged = true
+		}
 	}
 	step.manager.mutex.Unlock()
 }
@@ -60,6 +67,8 @@ func (step *Step) sendMessageMPI(mes *MessageMPI, toProc int, tag int) error {
 	}
 	step.manager.mutex.Lock()
 	step.slave.comm.SendBytes(mesBytes, toProc, tag)
+
+	step.slave.algo.logger.recvTagIntoStep(tag)
 	step.manager.mutex.Unlock()
 	return nil
 }
@@ -123,6 +132,10 @@ func (step *Step) receiving() error {
 			break
 		}
 
+		step.manager.mutex.Lock()
+		step.slave.algo.logger.sendTagIntoStep(tag)
+		step.manager.mutex.Unlock()
+
 		var mesObj MessageMPI
 
 		err := json.Unmarshal(mes, &mesObj)
@@ -156,9 +169,11 @@ func (step *Step) getStartMesssageMPI(edge graph.Edge) MessageMPI {
 	var mes MessageMPI
 	switch step.t {
 	case STEP_STOCH_H:
-		mes = MessageMPI{V: step.slave.cc[edge.V1], PPNonConst: edge.V2, StartProc: step.slave.rank}
+		mes = MessageMPI{V: step.slave.f[edge.V1], PPNonConst: edge.V2, StartProc: step.slave.rank}
 	case STEP_AGGR_H:
 		mes = MessageMPI{V: edge.V1, PPNonConst: edge.V2}
+	case STEP_SHORTCUT_H:
+		mes = MessageMPI{V: edge.V1, PPNonConst: step.slave.f[edge.V1]}
 	default:
 		mes = MessageMPI{}
 	}
@@ -168,13 +183,11 @@ func (step *Step) getStartMesssageMPI(edge graph.Edge) MessageMPI {
 
 func (step *Step) sending() error {
 	if step.t == STEP_SHORTCUT_H {
-		for u := range step.slave.cc {
-			step.manager.mutex.Lock()
-			mes := MessageMPI{V: u, PPNonConst: step.slave.cc[u]}
-			step.manager.mutex.Unlock()
+		for u := range step.slave.f {
+			mes := step.getStartMesssageMPI(graph.Edge{V1: u, V2: u})
 			err := step.sendH(&mes, TAG_STEP_0)
 			if err != nil {
-				return fmt.Errorf("sendingStoch: %v", err)
+				return fmt.Errorf("sending step.type=%d: %v", step.t, err)
 			}
 		}
 	} else {
@@ -184,14 +197,14 @@ func (step *Step) sending() error {
 			mes = step.getStartMesssageMPI(edge)
 			err = step.sendH(&mes, TAG_STEP_0)
 			if err != nil {
-				return fmt.Errorf("sendingStoch: %v", err)
+				return fmt.Errorf("sending step.type=%d: %v", step.t, err)
 			}
 
 			if step.slave.IsOwnerOfVertex(edge.V2) {
 				mes = step.getStartMesssageMPI(graph.Edge{V1: edge.V2, V2: edge.V1})
 				err = step.sendH(&mes, TAG_STEP_0)
 				if err != nil {
-					return fmt.Errorf("sendingStoch: %v", err)
+					return fmt.Errorf("sending step.type=%d: %v", step.t, err)
 				}
 			}
 		}
@@ -217,7 +230,7 @@ func (step *Step) getChainsCnt() int {
 	case STEP_AGGR_H:
 		return step.edgeChainsCnt()
 	case STEP_SHORTCUT_H:
-		return len(step.slave.cc)
+		return len(step.slave.f)
 	default:
 		return 0
 	}

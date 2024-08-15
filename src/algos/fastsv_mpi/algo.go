@@ -2,37 +2,63 @@ package fastsv_mpi
 
 import (
 	"CC/algos/algo_config"
+	"CC/algos/ilogger"
 	"CC/graph"
 	"CC/mympi"
+	"CC/utils"
+	"fmt"
 	"log"
-	// "log"
 )
 
-func Vertex2Proc(conf *algo_config.AlgoConfig, v graph.IndexType) int {
-	return int(v % graph.IndexType((conf.ProcNum)))
+// Варианты алгоритма
+const (
+	// дискретное обновление с учетом родителей первого порядка
+	VARIANT_DISC_F_PAR = "disc_f_par"
+	// непрерывное обновление с учетом родителей первого порядка
+	VARIANT_CONT_F_PAR = "cont_f_par"
+	// непрерывное обновление с учетом родителей первого и второго порядка
+	VARIANT_CONT_S_PAR = "cont_s_par"
+)
+
+var variants []string = []string{
+	VARIANT_DISC_F_PAR,
+	VARIANT_CONT_F_PAR,
+	VARIANT_CONT_S_PAR,
+} 
+
+type Algo struct {
+	logger *Logger
+	conf *algo_config.AlgoConfig
 }
 
-func getSlaveRanksArray() []int {
-	arr := []int{}
-	for i := 0; i < MASTER_RANK; i++ {
-		arr = append(arr, i)
+func (algo *Algo) Init(conf *algo_config.AlgoConfig) error {
+	// сохранение конфигурации
+	algo.conf = conf
+	MASTER_RANK = algo.conf.ProcNum
+
+	// инициализация логгера
+	algo.logger = &Logger{}
+	algo.logger.Init()
+
+	// проверка верности варианта алгоритма
+	if !utils.Contains(variants, algo.conf.Variant) {
+		return fmt.Errorf("unknown algo variant=%s", algo.conf.Variant)
 	}
-	return arr
+	return nil
 }
 
-func copyCC(dest map[graph.IndexType]graph.IndexType, src map[graph.IndexType]graph.IndexType) {
-	for key, value := range src {
-		dest[key] = value
-	}
+func (algo *Algo) Close() error {
+	algo.logger.Close()
+	return nil
 }
 
-func Run(conf *algo_config.AlgoConfig) error {
+func (algo *Algo) GetLogger() ilogger.ILogger {
+	return algo.logger
+}
+
+func (algo *Algo) Run() error {
 	rank := mympi.WorldRank()
-	// общий коммуникатор
 	comm := mympi.WorldCommunicator()
-
-	MASTER_RANK = conf.ProcNum
-	comm.Barrier()
 
 	// коммуникатор только для ведомых процессов (чтобы ставить барьеры только для них)
 	slavesComm := mympi.SlavesCommunicator(MASTER_RANK)
@@ -44,7 +70,7 @@ func Run(conf *algo_config.AlgoConfig) error {
 	if rank == MASTER_RANK {
 		master = Master{
 			comm: comm,
-			conf: conf,
+			algo: algo,
 		}
 		err = master.Init()
 	} else {
@@ -52,7 +78,7 @@ func Run(conf *algo_config.AlgoConfig) error {
 			rank:       rank,
 			comm:       comm,
 			slavesComm: slavesComm,
-			conf:       conf,
+			algo:       algo,
 		}
 		err = slave.Init()
 	}
@@ -89,7 +115,6 @@ func Run(conf *algo_config.AlgoConfig) error {
 		return err
 	}
 
-
 	comm.Barrier()
 
 	if rank == MASTER_RANK {
@@ -100,9 +125,15 @@ func Run(conf *algo_config.AlgoConfig) error {
 
 	comm.Barrier()
 
-	if rank == MASTER_RANK {
-		log.Println(master.g.CC)
-	}
-
 	return nil
+}
+
+func (algo *Algo) getSlave(v graph.IndexType) int {
+	return int(v % graph.IndexType((algo.conf.ProcNum)))
+}
+
+func copyCC(dest map[graph.IndexType]graph.IndexType, src map[graph.IndexType]graph.IndexType) {
+	for key, value := range src {
+		dest[key] = value
+	}
 }

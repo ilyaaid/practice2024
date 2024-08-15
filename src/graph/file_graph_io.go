@@ -73,6 +73,6 @@ func readFromCsvFile(file *os.File) (*Graph, error) {
 }
 
 
-func (fGrIO *FileGraphIO) WriteCC(cc map[IndexType]IndexType) error {
+func (fGrIO *FileGraphIO) Write(cc map[IndexType]IndexType) error {
 	return nil
 }

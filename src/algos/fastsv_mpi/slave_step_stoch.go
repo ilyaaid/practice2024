@@ -9,14 +9,14 @@ func (step *Step) recvStoch(mes *MessageMPI, tag int) error {
 	switch tag {
 	case TAG_STEP_0:
 		step.manager.mutex.Lock()
-		mes.PPNonConst = step.slave.cc[mes.PPNonConst]
+		mes.PPNonConst = step.slave.f[mes.PPNonConst]
 		step.manager.mutex.Unlock()
 
 		tag = step.getNextTagStep(tag)
 		err = step.sendStoch(mes, tag)
 	case TAG_STEP_1:
 		step.manager.mutex.Lock()
-		mes.PPNonConst = step.slave.cc[mes.PPNonConst]
+		mes.PPNonConst = step.slave.f[mes.PPNonConst]
 		step.manager.mutex.Unlock()
 
 		tag = step.getNextTagStep(tag)
@@ -37,15 +37,14 @@ func (step *Step) recvStoch(mes *MessageMPI, tag int) error {
 	return nil
 }
 
-
 func (step *Step) sendStoch(mes *MessageMPI, tag int) error {
 	switch tag {
 	case TAG_STEP_0:
-		toProc := Vertex2Proc(step.slave.conf, mes.PPNonConst)
+		toProc := step.slave.algo.getSlave(mes.PPNonConst)
 
 		if toProc == step.slave.rank {
 			step.manager.mutex.Lock()
-			mes.PPNonConst = step.slave.cc[mes.PPNonConst]
+			mes.PPNonConst = step.slave.f[mes.PPNonConst]
 			step.manager.mutex.Unlock()
 
 			tag = step.getNextTagStep(tag)
@@ -55,11 +54,11 @@ func (step *Step) sendStoch(mes *MessageMPI, tag int) error {
 		}
 		fallthrough
 	case TAG_STEP_1:
-		toProc := Vertex2Proc(step.slave.conf, mes.PPNonConst)
+		toProc := step.slave.algo.getSlave( mes.PPNonConst)
 
 		if toProc == step.slave.rank {
 			step.manager.mutex.Lock()
-			mes.PPNonConst = step.slave.cc[mes.PPNonConst]
+			mes.PPNonConst = step.slave.f[mes.PPNonConst]
 			step.manager.mutex.Unlock()
 
 			tag = step.getNextTagStep(tag)
@@ -69,7 +68,7 @@ func (step *Step) sendStoch(mes *MessageMPI, tag int) error {
 		}
 		fallthrough
 	case TAG_STEP_2:
-		toProc := Vertex2Proc(step.slave.conf, mes.V)
+		toProc := step.slave.algo.getSlave(mes.V)
 		if toProc == step.slave.rank {
 			step.updateCC(mes.V, mes.PPNonConst)
 			tag = TAG_STEP_3
@@ -78,7 +77,7 @@ func (step *Step) sendStoch(mes *MessageMPI, tag int) error {
 			return nil
 		}
 		fallthrough
-	case TAG_STEP_3: 
+	case TAG_STEP_3:
 		if step.slave.rank == mes.StartProc {
 			step.reduceChains()
 		} else {

@@ -2,22 +2,61 @@ package basic_mpi
 
 import (
 	"CC/algos/algo_config"
+	"CC/algos/ilogger"
 	"CC/graph"
 	"CC/mympi"
+	"CC/utils"
+	"fmt"
 	"log"
 )
 
-func Vertex2Proc(conf *algo_config.AlgoConfig, v graph.IndexType) int {
-	return int(v % graph.IndexType((conf.ProcNum)))
+// Варианты алгоритма
+const (
+	// непрерывное обновление
+	VARIANT_CONT = "cont"
+)
+
+var variants []string = []string{
+	// VARIANT_DISC,
+	VARIANT_CONT,
+} 
+
+type Algo struct {
+	logger *Logger
+	conf *algo_config.AlgoConfig
 }
 
-func Run(conf *algo_config.AlgoConfig) error {
+func (algo *Algo) GetLogger() ilogger.ILogger {
+	return algo.logger
+}
+
+func (algo* Algo) Init(conf *algo_config.AlgoConfig) error {
+	algo.conf = conf
+	MASTER_RANK = algo.conf.ProcNum
+
+	algo.logger = &Logger{}
+	algo.logger.Init()
+
+	// проверка верности варианта алгоритма
+	if !utils.Contains(variants, algo.conf.Variant) {
+		return fmt.Errorf("unknown algo variant=%s", algo.conf.Variant)
+	}
+	return nil
+}
+
+func (algo *Algo) Close() error {
+	algo.logger.Close()
+	return nil
+}
+
+func (algo *Algo) getSlave(v graph.IndexType) int {
+	return int(v % graph.IndexType((algo.conf.ProcNum)))
+}
+
+func (algo *Algo) Run() error {
 	rank := mympi.WorldRank()
 	// общий коммуникатор
 	comm := mympi.WorldCommunicator()
-
-	MASTER_RANK = conf.ProcNum
-	comm.Barrier()
 
 	// коммуникатор только для ведомых процессов (чтобы ставить барьеры только для них)
 	slavesComm := mympi.SlavesCommunicator(MASTER_RANK)
@@ -29,7 +68,7 @@ func Run(conf *algo_config.AlgoConfig) error {
 	if rank == MASTER_RANK {
 		master = Master {
 			comm: comm,
-			conf: conf,
+			algo: algo,
 		}
 		err = master.Init()
 	} else {
@@ -37,7 +76,7 @@ func Run(conf *algo_config.AlgoConfig) error {
 			rank: rank,
 			comm: comm,
 			slavesComm: slavesComm,
-			conf: conf,
+			algo: algo,
 		}
 		err = slave.Init()
 	}
@@ -55,12 +94,6 @@ func Run(conf *algo_config.AlgoConfig) error {
 		return err
 	}
 
-	// if rank != MASTER_RANK {
-	// 	log.Println(len(slave.edges))
-	// } else {
-	// 	log.Println(len(master.g.Edges))
-	// }
-
 	comm.Barrier()
 
 	// подсчет количества получаемых сообщений на обновление родителя
@@ -69,30 +102,6 @@ func Run(conf *algo_config.AlgoConfig) error {
 	}
 
 	comm.Barrier()
-
-	//тест
-	// if rank == MASTER_RANK {
-	// 	log.Println("sending")
-	// 	sendMes(master.comm, []byte{234, 24, 54, 56}, 0, TAG_IS_CHANGED)
-	// 	log.Println("sended")
-	// } else {
-	// 	if (slave.rank == 0) {
-	// 		is := false
-	// 		var status *mympi.Status
-	// 		for !is {
-	// 			is, status = slave.comm.Iprobe(MASTER_RANK, TAG_IS_CHANGED)
-	// 		}
-	// 		log.Println(is, status.GetCount(mympi.Byte))
-	// 		status = slave.comm.Probe(MASTER_RANK, TAG_IS_CHANGED)
-	// 		log.Println(status.GetCount(mympi.Byte))
-	// 		mes, _ := slave.comm.RecvBytes(MASTER_RANK, TAG_IS_CHANGED)
-	// 		log.Println(mes)
-	// 		// buf := make([]byte, 1)
-	// 		// slave.comm.RecvPreallocBytes(buf, MASTER_RANK, TAG_IS_CHANGED)
-	// 		// log.Println(buf)
-	// 		// recvMes(slave.comm, MASTER_RANK, TAG_IS_CHANGED)
-	// 	}
-	// }
 
 	if rank == MASTER_RANK {
 		log.Println("==================")
@@ -113,13 +122,7 @@ func Run(conf *algo_config.AlgoConfig) error {
 		}
 	}
 
-	// log.Println(mympi.X_min, mympi.Len_min, mympi.Len_max)
-
 	comm.Barrier()
-
-	// if rank != MASTER_RANK {
-	// 	log.Println(slave.cc)
-	// }
 
 	// реализация через отправку результата на ведущий процесс
 	if (rank == MASTER_RANK) {
@@ -132,22 +135,6 @@ func Run(conf *algo_config.AlgoConfig) error {
 	}
 
 	comm.Barrier()
-
-	// if (rank == MASTER_RANK) {
-	// 	err = master.prepResult()
-	// }
-	// if err != nil {
-	// 	return err
-	// }
-
-	// comm.Barrier()
-
-	// if (rank != MASTER_RANK) {
-	// 	err = slave.addResult()
-	// }
-	// if err != nil {
-	// 	return err
-	// }
 
 	if (rank == MASTER_RANK) {
 		log.Println(master.g.CC)

@@ -1,4 +1,5 @@
 bin/
 result/
+log/*
 .vscode/
 test_graphs/big-*.csv

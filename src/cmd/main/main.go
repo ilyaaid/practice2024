@@ -29,6 +29,7 @@ func main() {
 	algoConfig := algo_config.AlgoConfig{
 		GrIO: &graph.FileGraphIO{Filename:fh.File},
 		ProcNum: fh.Proc,
+		Variant: fh.AlgoVariant,
 	}
 
 	err = adapterFunc(algo, &algoConfig)

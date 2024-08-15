@@ -1,7 +1,6 @@
 package fastsv_mpi
 
 import (
-	"CC/algos/algo_config"
 	"CC/graph"
 	"CC/mympi"
 	"encoding/json"
@@ -16,25 +15,29 @@ type Slave struct {
 	comm       *mympi.Communicator
 	slavesComm *mympi.Communicator
 
-	// кофигурация для алгоритма
-	conf *algo_config.AlgoConfig
+	// объект самого алгоритма
+	algo *Algo
 
 	// параметры для части графа
 	edges []graph.Edge
 
-	changed bool
-	cc      map[graph.IndexType]graph.IndexType
-	ccnext  map[graph.IndexType]graph.IndexType
+	fchanged bool
+	ffchanged bool
+
+	f     map[graph.IndexType]graph.IndexType
+	ff    map[graph.IndexType]graph.IndexType
+	fnext map[graph.IndexType]graph.IndexType
 }
 
 func (slave *Slave) IsOwnerOfVertex(v graph.IndexType) bool {
-	return Vertex2Proc(slave.conf, v) == slave.rank
+	return slave.algo.getSlave(v) == slave.rank
 }
 
 func (slave *Slave) Init() error {
-	slave.changed = false
-	slave.cc = make(map[graph.IndexType]graph.IndexType)
-	slave.ccnext = make(map[graph.IndexType]graph.IndexType)
+	slave.fchanged = false
+	slave.f = make(map[graph.IndexType]graph.IndexType)
+	slave.fnext = make(map[graph.IndexType]graph.IndexType)
+	slave.ff = make(map[graph.IndexType]graph.IndexType)
 	return nil
 }
 
@@ -54,13 +57,13 @@ func (slave *Slave) GetEdges() error {
 			slave.edges = append(slave.edges, *edge)
 
 			// добавление вершин в CC
-			slave.cc[edge.V1] = edge.V1
-			slave.ccnext[edge.V1] = edge.V1
+			slave.f[edge.V1] = edge.V1
 			if slave.IsOwnerOfVertex(edge.V2) {
-				slave.cc[edge.V2] = edge.V2
-				slave.ccnext[edge.V2] = edge.V2
+				slave.f[edge.V2] = edge.V2
 			}
 		case TAG_NEXT_PHASE:
+			copyCC(slave.fnext, slave.f)
+			copyCC(slave.ff, slave.f)
 			return nil
 		default:
 			return fmt.Errorf("slave.GetEdges: Wrong TAG %d", recvTag)
@@ -74,31 +77,50 @@ func (slave *Slave) runSteps() error {
 	step := Step{slave: slave}
 	step.Init()
 
-	for !is_next_phase {
-		slave.changed = false
+	iteration := 0
 
+	slave.algo.logger.beginIterations()
+	for !is_next_phase {
+		slave.fchanged = false
+		slave.ffchanged = false
+
+		slave.algo.logger.beginStep(STEP_STOCH_H)
 		err := step.run(STEP_STOCH_H)
 		if err != nil {
 			return err
 		}
+		slave.algo.logger.endStep()
 
 		slave.slavesComm.Barrier()
 
+		slave.algo.logger.beginStep(STEP_AGGR_H)
 		err = step.run(STEP_AGGR_H)
 		if err != nil {
 			return err
 		}
+		slave.algo.logger.endStep()
 
 		slave.slavesComm.Barrier()
 
+		slave.algo.logger.beginStep(STEP_SHORTCUT_H)
 		err = step.run(STEP_SHORTCUT_H)
 		if err != nil {
 			return err
 		}
+		slave.algo.logger.endStep()
 
-		copyCC(slave.cc, slave.ccnext)
+		// если вариант запуска алгоритма с дискретным обновлением вектора
+		if slave.algo.conf.Variant == VARIANT_DISC_F_PAR {
+			copyCC(slave.f, slave.fnext)
+		}
 
-		if slave.changed {
+		// проверка на изменение родителей второго порядка
+		changed := slave.fchanged
+		if slave.algo.conf.Variant == VARIANT_CONT_S_PAR {
+			changed = slave.fchanged && slave.ffchanged
+		}
+
+		if changed {
 			mympi.SendTag(slave.comm, MASTER_RANK, TAG_IS_CHANGED)
 		} else {
 			mympi.SendTag(slave.comm, MASTER_RANK, TAG_IS_NOT_CHANGED)
@@ -107,8 +129,11 @@ func (slave *Slave) runSteps() error {
 		status := mympi.RecvTag(slave.comm, MASTER_RANK, mympi.AnyTag)
 		switch tag := status.GetTag(); tag {
 		case TAG_CONTINUE_CC:
+			slave.algo.logger.nextIteration()
+			iteration++
 			continue
 		case TAG_NEXT_PHASE:
+			slave.algo.logger.endIterations()
 			is_next_phase = true
 		default:
 			return fmt.Errorf("runSteps: wrong TAG %d", tag)
@@ -130,7 +155,7 @@ func (slave *Slave) addResult() error {
 	}
 	defer file.Close()
 
-	bytes, err := json.Marshal(slave.cc)
+	bytes, err := json.Marshal(slave.f)
 	if err != nil {
 		return err
 	}
@@ -139,7 +164,7 @@ func (slave *Slave) addResult() error {
 }
 
 func (slave *Slave) sendResult() error {
-	str, err := json.Marshal(slave.cc)
+	str, err := json.Marshal(slave.f)
 	if err != nil {
 		return err
 	}

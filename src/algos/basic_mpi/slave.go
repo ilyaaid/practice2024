@@ -1,7 +1,6 @@
 package basic_mpi
 
 import (
-	"CC/algos/algo_config"
 	"CC/graph"
 	"CC/mympi"
 	"encoding/json"
@@ -17,27 +16,28 @@ type Slave struct {
 	comm       *mympi.Communicator
 	slavesComm *mympi.Communicator
 
-	// кофигурация для алгоритма
-	conf *algo_config.AlgoConfig
+	algo *Algo
 
 	// параметры для части графа
 	edges []graph.Edge
 
 	changed  bool
-	cc       map[graph.IndexType]graph.IndexType
-	remotecc map[graph.IndexType]graph.IndexType
+	f       map[graph.IndexType]graph.IndexType
+	remotef map[graph.IndexType]graph.IndexType
+
+	// fnext map[graph.IndexType]graph.IndexType
 
 	ppNumber int
 }
 
 func (slave *Slave) IsOwnerOfVertex(v graph.IndexType) bool {
-	return Vertex2Proc(slave.conf, v) == slave.rank
+	return slave.algo.getSlave(v) == slave.rank
 }
 
 func (slave *Slave) Init() error {
 	slave.changed = false
-	slave.cc = make(map[graph.IndexType]graph.IndexType)
-	slave.remotecc = make(map[graph.IndexType]graph.IndexType)
+	slave.f = make(map[graph.IndexType]graph.IndexType)
+	slave.remotef = make(map[graph.IndexType]graph.IndexType)
 	return nil
 }
 
@@ -54,11 +54,11 @@ func (slave *Slave) GetEdges() error {
 
 			slave.edges = append(slave.edges, *edge)
 			// добавление вершин в CC
-			slave.cc[edge.V1] = edge.V1
+			slave.f[edge.V1] = edge.V1
 			if slave.IsOwnerOfVertex(edge.V2) {
-				slave.cc[edge.V2] = edge.V2
+				slave.f[edge.V2] = edge.V2
 			} else {
-				slave.remotecc[edge.V2] = edge.V2
+				slave.remotef[edge.V2] = edge.V2
 			}
 		} else if tag == TAG_NEXT_PHASE {
 			break
@@ -79,7 +79,7 @@ func (slave *Slave) countReceivingPPNumber() {
 			if !isExist {
 				countMp[edge.V1] = make(map[graph.IndexType]bool)
 			}
-			countMp[edge.V1][graph.IndexType(Vertex2Proc(slave.conf, edge.V2))] = true
+			countMp[edge.V1][graph.IndexType(slave.algo.getSlave(edge.V2))] = true
 		}
 	}
 	for _, mp := range countMp {
@@ -92,18 +92,18 @@ func (slave *Slave) countReceivingPPNumber() {
 func (slave *Slave) runHooking() {
 	for _, edge := range slave.edges {
 		if slave.IsOwnerOfVertex(edge.V2) {
-			if slave.cc[edge.V1] < slave.cc[edge.V2] {
-				slave.cc[edge.V2] = slave.cc[edge.V1]
+			if slave.f[edge.V1] < slave.f[edge.V2] {
+				slave.f[edge.V2] = slave.f[edge.V1]
 				slave.changed = true
-			} else if slave.cc[edge.V1] > slave.cc[edge.V2] {
-				slave.cc[edge.V1] = slave.cc[edge.V2]
+			} else if slave.f[edge.V1] > slave.f[edge.V2] {
+				slave.f[edge.V1] = slave.f[edge.V2]
 				slave.changed = true
 			}
 		} else {
-			if slave.cc[edge.V1] < slave.remotecc[edge.V2] {
-				slave.remotecc[edge.V2] = slave.cc[edge.V1]
-			} else if slave.cc[edge.V1] > slave.remotecc[edge.V2] {
-				slave.cc[edge.V1] = slave.remotecc[edge.V2]
+			if slave.f[edge.V1] < slave.remotef[edge.V2] {
+				slave.remotef[edge.V2] = slave.f[edge.V1]
+			} else if slave.f[edge.V1] > slave.remotef[edge.V2] {
+				slave.f[edge.V1] = slave.remotef[edge.V2]
 			}
 		}
 	}
@@ -120,17 +120,17 @@ func (slave *Slave) sendPP(mutex *sync.Mutex, ppnode *PPnode, toID int) error {
 		return err
 	}
 	mutex.Lock()
-	// log.Println("send lock")
 	slave.comm.SendBytes(ppnodeBytes, toID, TAG_SEND_PP)
 	mutex.Unlock()
-	// log.Println("send unlock")
-	// log.Println("send:", ppnodeBytes, toID)
+
+	slave.algo.logger.sendTag()
+
 	return nil
 }
 
 func (slave *Slave) sendingPP(mutex *sync.Mutex) error {
-	for remoteV, proposedParent := range slave.remotecc {
-		remoteProc := Vertex2Proc(slave.conf, remoteV)
+	for remoteV, proposedParent := range slave.remotef {
+		remoteProc := slave.algo.getSlave(remoteV)
 		slave.sendPP(mutex, &PPnode{remoteV, proposedParent}, remoteProc)
 	}
 	return nil
@@ -142,16 +142,14 @@ func (slave *Slave) receivePP(mutex *sync.Mutex) (*PPnode, error) {
 		mutex.Lock()
 		is_exist, _ := slave.comm.Iprobe(mympi.AnySource, TAG_SEND_PP)
 		if is_exist {
-			// log.Println("recv lock")
 			mes, _ = slave.comm.RecvBytes(mympi.AnySource, TAG_SEND_PP)
-			// log.Println(mes)
 			mutex.Unlock()
-			// log.Println("recv unlock")
 			break
 		}
 		mutex.Unlock()
 	}
-	// log.Println("recv:", mes, status.GetSource(), status.GetTag())
+
+	slave.algo.logger.recvTag()
 
 	var ppnode PPnode
 	err := json.Unmarshal(mes, &ppnode)
@@ -162,15 +160,13 @@ func (slave *Slave) receivePP(mutex *sync.Mutex) (*PPnode, error) {
 }
 
 func (slave *Slave) receivingPP(mutex *sync.Mutex) error {
-	// log.Println("before")
 	for i := 0; i < slave.ppNumber; i++ {
 		ppnode, err := slave.receivePP(mutex)
-		// log.Println("after")
 		if err != nil {
 			return err
 		}
-		if slave.cc[ppnode.RemoteV] > ppnode.PP {
-			slave.cc[ppnode.RemoteV] = ppnode.PP
+		if slave.f[ppnode.RemoteV] > ppnode.PP {
+			slave.f[ppnode.RemoteV] = ppnode.PP
 			slave.changed = true
 		}
 	}
@@ -200,13 +196,18 @@ func (slave *Slave) runPP() error {
 }
 
 func (slave *Slave) CCSearch() error {
+	slave.algo.logger.beginIterations()
 	for {
+		slave.algo.logger.beginIteration()
+
 		slave.changed = false
 		slave.runHooking()
 		err := slave.runPP()
 		if err != nil {
 			return err
 		}
+
+		slave.algo.logger.endIteration()
 
 		if slave.changed {
 			mympi.SendTag(slave.comm, MASTER_RANK, TAG_IS_CHANGED)
@@ -223,13 +224,15 @@ func (slave *Slave) CCSearch() error {
 			return fmt.Errorf("wrong tag=%d from MASTER_RANK", tag)
 		}
 	}
+
+	slave.algo.logger.endIterations()
 	return nil
 }
 
 //=================== Получение результата
 
 func (slave *Slave) sendResult() error {
-	str, err := json.Marshal(slave.cc)
+	str, err := json.Marshal(slave.f)
 	if err != nil {
 		return err
 	}

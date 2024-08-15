@@ -1,7 +1,6 @@
 package basic_mpi
 
 import (
-	"CC/algos/algo_config"
 	"CC/graph"
 	"CC/mympi"
 	"encoding/json"
@@ -14,28 +13,27 @@ type Master struct {
 	// параметры для MPI
 	comm *mympi.Communicator
 
-	// кофигурация для алгоритма
-	conf *algo_config.AlgoConfig
+	algo *Algo
 
 	// параметры для графа
 	g *graph.Graph
 }
 
 func (master *Master) BcastSend(mes []byte, tag int) {
-	for i := 0; i < master.conf.ProcNum; i++ {
+	for i := 0; i < master.algo.conf.ProcNum; i++ {
 		master.comm.SendBytes(mes, i, tag)
 	}
 }
 
 func (master *Master) BcastSendTag(tag int) {
-	for i := 0; i < master.conf.ProcNum; i++ {
+	for i := 0; i < master.algo.conf.ProcNum; i++ {
 		mympi.SendTag(master.comm, i, tag)
 	}
 }
 
 func (master *Master) Init() error {
 	var err error
-	master.g, err = master.conf.GrIO.Read()
+	master.g, err = master.algo.conf.GrIO.Read()
 	if err != nil {
 		return err
 	}
@@ -45,7 +43,7 @@ func (master *Master) Init() error {
 // распределение ребер по процессам
 func (master *Master) SendAllEdges() error {
 	for _, edge := range master.g.Edges {
-		proc1, proc2 := Vertex2Proc(master.conf, edge.V1), Vertex2Proc(master.conf, edge.V2)
+		proc1, proc2 := master.algo.getSlave(edge.V1), master.algo.getSlave(edge.V2)
 		edgeBytes, err := edge.ToBytes()
 		if err != nil {
 			return err
@@ -70,7 +68,7 @@ func (master *Master) manageCCSearch() error {
 	changed := true
 	for changed {
 		changed = false
-		for i := 0; i < master.conf.ProcNum; i++ {
+		for i := 0; i < master.algo.conf.ProcNum; i++ {
 			status := mympi.RecvTag(master.comm, i, mympi.AnyTag)
 			if tag := status.GetTag(); 
 			tag == TAG_IS_CHANGED  {
@@ -92,7 +90,7 @@ func (master *Master) manageCCSearch() error {
 // Результат
 
 func (master *Master) getResult() error {
-	for i := 0; i < master.conf.ProcNum; i++ {
+	for i := 0; i < master.algo.conf.ProcNum; i++ {
 		mes, _ := master.comm.RecvBytes(i, TAG_SEND_RESULT)
 
 		var cc map[graph.IndexType]graph.IndexType

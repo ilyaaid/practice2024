@@ -28,12 +28,14 @@ func AdapterMPI(algo string, conf *algo_config.AlgoConfig) (error) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	cmd.Start()
-	defer cmd.Process.Kill()
-
-	// ждем, пока mpi отработает и выводим, что он написал
-	if err := cmd.Wait(); err != nil {
+	
+	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("error in algo %s:\n%s", algo, err)
 	}
+
+	if cmd.Process != nil {
+		cmd.Process.Kill()
+	}
+
 	return nil
 }
