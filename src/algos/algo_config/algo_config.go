@@ -11,6 +11,7 @@ type AlgoConfig struct {
 	GrIO graph.GraphIO
 	ProcNum int
 	Variant string
+	Logging bool
 }
 
 func (conf *AlgoConfig) UnmarshalJSON(data []byte) error {
@@ -18,6 +19,7 @@ func (conf *AlgoConfig) UnmarshalJSON(data []byte) error {
 		GrIO json.RawMessage
         ProcNum int
 		Variant string
+		Logging bool
     }
 
     var confj AlgoConfigJSON
@@ -27,6 +29,7 @@ func (conf *AlgoConfig) UnmarshalJSON(data []byte) error {
     }
 	conf.ProcNum = confj.ProcNum
 	conf.Variant = confj.Variant
+	conf.Logging = confj.Logging
 
 	var v1 graph.FileGraphIO
 	err = json.Unmarshal(confj.GrIO, &v1)

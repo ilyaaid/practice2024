@@ -52,12 +52,18 @@ func main() {
 		log.Panicln("algo Init:", err)
 	}
 
-	logger := algo.GetLogger()
-	logger.Start()
+	
+	if conf.Logging {
+		logger := algo.GetLogger()
+		logger.Start()
+		err = algo.Run()
+		logger.Finish()
+	} else {
+		err = algo.Run()
+	}
 
-	err = algo.Run()
 	if err != nil {
 		log.Panicln("main_mpi runFunc:", err)
 	}
-	logger.Finish()
+
 }

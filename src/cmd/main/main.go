@@ -30,6 +30,7 @@ func main() {
 		GrIO: &graph.FileGraphIO{Filename:fh.File},
 		ProcNum: fh.Proc,
 		Variant: fh.AlgoVariant,
+		Logging: fh.Logging,
 	}
 
 	err = adapterFunc(algo, &algoConfig)

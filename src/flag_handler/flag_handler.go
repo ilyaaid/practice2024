@@ -15,6 +15,7 @@ const (
 	FLAG_file = "file"
 	FLAG_proc_num = "proc-num"
 	FLAG_conf = "conf"
+	FLAG_logging = "logging"
 )
 
 type FlagHadler struct {
@@ -23,6 +24,7 @@ type FlagHadler struct {
 	File string
 	Proc int
 	Conf string
+	Logging bool
 }
 
 func (fh *FlagHadler) Parse() {
@@ -32,6 +34,7 @@ func (fh *FlagHadler) Parse() {
 	flag.StringVar(&fh.File, FLAG_file, "", "file with graph")
 	flag.IntVar(&fh.Proc, FLAG_proc_num, 0, "number of processes (for MPI)")
 	flag.StringVar(&fh.Conf, FLAG_conf, "", "config json string (for MPI)")
+	flag.BoolVar(&fh.Logging, FLAG_logging, false, "logging (for MPI)")
 
 	flag.Parse()
 
