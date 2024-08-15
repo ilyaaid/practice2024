@@ -84,6 +84,7 @@ func (master *Master) manageCCSearch() error {
 		if changed {
 			mympi.BcastSendTag(MASTER_RANK, TAG_CONTINUE_CC)
 		}
+		master.algo.logger.nextIteration()
 	}
 	mympi.BcastSendTag(MASTER_RANK, TAG_NEXT_PHASE)
 	return nil

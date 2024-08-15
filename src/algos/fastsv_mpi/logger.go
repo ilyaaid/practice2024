@@ -93,7 +93,7 @@ func (logger *Logger) Finish() error {
 	mympi.WorldCommunicator().Barrier()
 	if mympi.WorldRank() == MASTER_RANK {
 		commonFile, _ := os.Create(filepath.Dir(logger.csvFile.Name()) + "/common.txt")
-		commonFile.WriteString(fmt.Sprintf("Algorithm duration: %s", algoDuration))
+		commonFile.WriteString(fmt.Sprintf("Algorithm duration: %s\n", algoDuration))
 		commonFile.WriteString(fmt.Sprintf("Iteration count: %d", logger.iterNum))
 	}
 

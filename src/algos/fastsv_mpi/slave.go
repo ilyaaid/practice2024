@@ -80,6 +80,7 @@ func (slave *Slave) runSteps() error {
 	iteration := 0
 
 	slave.algo.logger.beginIterations()
+	
 	for !is_next_phase {
 		slave.fchanged = false
 		slave.ffchanged = false

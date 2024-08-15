@@ -67,6 +67,7 @@ func (master *Master) SendAllEdges() error {
 func (master *Master) manageCCSearch() error {
 	changed := true
 	for changed {
+		master.algo.logger.beginIteration()
 		changed = false
 		for i := 0; i < master.algo.conf.ProcNum; i++ {
 			status := mympi.RecvTag(master.comm, i, mympi.AnyTag)
@@ -82,6 +83,7 @@ func (master *Master) manageCCSearch() error {
 		if changed {
 			master.BcastSendTag(TAG_CONTINUE_CC)
 		}
+		master.algo.logger.endIteration()
 	}
 	master.BcastSendTag(TAG_NEXT_PHASE)
 	return nil

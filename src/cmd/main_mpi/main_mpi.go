@@ -44,15 +44,15 @@ func main() {
 		log.Panicln("main_mpi StrToObj:", err)
 	}
 
+	// fh - объект для хранения значения всех флагов командной строки
 	var algo ialgo.IAlgo = getAlgo(fh.Algo)
 	err = algo.Init(conf)
-
-	defer algo.Close()
 	if err != nil {
 		log.Panicln("algo Init:", err)
 	}
 
-	
+	defer algo.Close()
+
 	if conf.Logging {
 		logger := algo.GetLogger()
 		logger.Start()
