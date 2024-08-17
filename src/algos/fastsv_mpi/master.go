@@ -93,7 +93,7 @@ func (master *Master) manageCCSearch() error {
 // Результат
 
 func (master *Master) getResult() error {
-	
+
 	for i := 0; i < master.algo.conf.ProcNum; i++ {
 		mes, _ := master.comm.RecvBytes(i, TAG_SEND_RESULT)
 
@@ -104,10 +104,10 @@ func (master *Master) getResult() error {
 		}
 
 		for v, vcc := range cc {
-			master.g.CC[v] = vcc
+			master.g.F[v] = vcc
 		}
 	}
-	
+
 	return nil
 }
 

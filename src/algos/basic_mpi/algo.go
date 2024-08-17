@@ -19,18 +19,18 @@ const (
 var variants []string = []string{
 	// VARIANT_DISC,
 	VARIANT_CONT,
-} 
+}
 
 type Algo struct {
 	logger *Logger
-	conf *algo_config.AlgoConfig
+	conf   *algo_config.AlgoConfig
 }
 
 func (algo *Algo) GetLogger() ilogger.ILogger {
 	return algo.logger
 }
 
-func (algo* Algo) Init(conf *algo_config.AlgoConfig) error {
+func (algo *Algo) Init(conf *algo_config.AlgoConfig) error {
 	algo.conf = conf
 	MASTER_RANK = algo.conf.ProcNum
 
@@ -66,17 +66,17 @@ func (algo *Algo) Run() error {
 	var err error
 
 	if rank == MASTER_RANK {
-		master = Master {
+		master = Master{
 			comm: comm,
 			algo: algo,
 		}
 		err = master.Init()
 	} else {
-		slave = Slave {
-			rank: rank,
-			comm: comm,
+		slave = Slave{
+			rank:       rank,
+			comm:       comm,
 			slavesComm: slavesComm,
-			algo: algo,
+			algo:       algo,
 		}
 		err = slave.Init()
 	}
@@ -85,7 +85,7 @@ func (algo *Algo) Run() error {
 	}
 
 	// распеределение ребер с ведущего по всем ведомым узлам (разбиение графа на части)
-	if (rank == MASTER_RANK) {
+	if rank == MASTER_RANK {
 		err = master.SendAllEdges()
 	} else {
 		err = slave.GetEdges()
@@ -97,7 +97,7 @@ func (algo *Algo) Run() error {
 	comm.Barrier()
 
 	// подсчет количества получаемых сообщений на обновление родителя
-	if (rank != MASTER_RANK) {
+	if rank != MASTER_RANK {
 		slave.countReceivingPPNumber()
 	}
 
@@ -108,7 +108,7 @@ func (algo *Algo) Run() error {
 	}
 
 	// вычисляем CC
-	if (rank == MASTER_RANK) {
+	if rank == MASTER_RANK {
 		err = master.manageCCSearch()
 		if err != nil {
 			log.Panicln("master.manageCCSearch:", err)
@@ -125,7 +125,7 @@ func (algo *Algo) Run() error {
 	comm.Barrier()
 
 	// реализация через отправку результата на ведущий процесс
-	if (rank == MASTER_RANK) {
+	if rank == MASTER_RANK {
 		err = master.getResult()
 	} else {
 		err = slave.sendResult()
@@ -136,8 +136,8 @@ func (algo *Algo) Run() error {
 
 	comm.Barrier()
 
-	if (rank == MASTER_RANK) {
-		log.Println(master.g.CC)
+	if rank == MASTER_RANK {
+		log.Println(master.g.F)
 	}
 	return nil
 }

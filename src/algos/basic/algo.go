@@ -5,7 +5,7 @@ import (
 )
 
 func CCSearch(g *graph.Graph) {
-	f := g.CC
+	f := g.F
 
 	changed := true
 	for changed {

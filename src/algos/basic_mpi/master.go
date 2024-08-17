@@ -71,8 +71,7 @@ func (master *Master) manageCCSearch() error {
 		changed = false
 		for i := 0; i < master.algo.conf.ProcNum; i++ {
 			status := mympi.RecvTag(master.comm, i, mympi.AnyTag)
-			if tag := status.GetTag(); 
-			tag == TAG_IS_CHANGED  {
+			if tag := status.GetTag(); tag == TAG_IS_CHANGED {
 				changed = true
 			} else if tag == TAG_IS_NOT_CHANGED {
 				continue
@@ -102,7 +101,7 @@ func (master *Master) getResult() error {
 		}
 
 		for v, vcc := range cc {
-			master.g.CC[v] = vcc
+			master.g.F[v] = vcc
 		}
 	}
 	return nil

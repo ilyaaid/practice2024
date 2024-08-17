@@ -11,52 +11,46 @@ func copyCC(dest map[graph.IndexType]graph.IndexType, src map[graph.IndexType]gr
 }
 
 func CCSearch(g *graph.Graph) {
-	f := g.CC
-	fnext := make(map[graph.IndexType]graph.IndexType) 
-	copyCC(fnext, f)
+	f := g.F
 
 	changed := true
 
 	for changed {
 		changed = false
 
-		// stoch
+		// stochastic hooking
 		for _, edge := range g.Edges {
 			u, v := edge.V1, edge.V2
 
-			if fnext[f[u]] > f[f[v]] {
-				fnext[f[u]] = f[f[v]]
+			if f[f[u]] > f[f[v]] {
+				f[f[u]] = f[f[v]]
 				changed = true
 			}
-			if fnext[f[v]] > f[f[u]] {
-				fnext[f[v]] = f[f[u]]
-				changed = true 
+			if f[f[v]] > f[f[u]] {
+				f[f[v]] = f[f[u]]
+				changed = true
 			}
 		}
-
-		// aggr 
+		// aggressive hooking
 		for _, edge := range g.Edges {
 			u, v := edge.V1, edge.V2
 
-			if fnext[u] > f[f[v]] {
-				fnext[u] = f[f[v]]
+			if f[u] > f[f[v]] {
+				f[u] = f[f[v]]
 				changed = true
 			}
 
-			if fnext[v] > f[f[u]] {
-				fnext[v] = f[f[u]]
+			if f[v] > f[f[u]] {
+				f[v] = f[f[u]]
 				changed = true
 			}
 		}
-
 		// shortcut
-		for u := range g.CC {
-			if fnext[u] > f[f[u]] {
-				fnext[u] = f[f[u]]
+		for u := range g.F {
+			if f[u] > f[f[u]] {
+				f[u] = f[f[u]]
 				changed = true
 			}
 		}
-		
-		copyCC(f, fnext)
 	}
 }

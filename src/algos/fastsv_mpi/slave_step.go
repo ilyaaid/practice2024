@@ -68,7 +68,7 @@ func (step *Step) sendMessageMPI(mes *MessageMPI, toProc int, tag int) error {
 	step.manager.mutex.Lock()
 	step.slave.comm.SendBytes(mesBytes, toProc, tag)
 
-	step.slave.algo.logger.recvTagIntoStep(tag)
+	step.slave.algo.logger.sendTagIntoStep(tag)
 	step.manager.mutex.Unlock()
 	return nil
 }
@@ -133,7 +133,7 @@ func (step *Step) receiving() error {
 		}
 
 		step.manager.mutex.Lock()
-		step.slave.algo.logger.sendTagIntoStep(tag)
+		step.slave.algo.logger.recvTagIntoStep(tag)
 		step.manager.mutex.Unlock()
 
 		var mesObj MessageMPI

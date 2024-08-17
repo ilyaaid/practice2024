@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"CC/algos/algo_config"
-	"log"
 )
 
 func Adapter(algo string, conf *algo_config.AlgoConfig) (error) {
@@ -15,6 +14,5 @@ func Adapter(algo string, conf *algo_config.AlgoConfig) (error) {
 		return err
 	}
 	ccSearchFunc(g)
-	log.Println(g.CC)
 	return nil
 }
